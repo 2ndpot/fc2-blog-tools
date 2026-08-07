@@ -33,9 +33,14 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
       .map(([key, label]) => `${label}:${data.credit[key]}`);
 
     if (credits.length > 0) {
-      const credit = document.createElement("small");
-      credit.textContent = credits.join(", ");
-      container.appendChild(credit);
+      const p = document.createElement("p");
+      p.className = "credit";
+
+      const small = document.createElement("small");
+      small.textContent = credits.join("、");
+
+      p.appendChild(small);
+      container.appendChild(p);
     }
   } catch (error) {
     console.error("music-data のJSONを読み取れませんでした。", error);
