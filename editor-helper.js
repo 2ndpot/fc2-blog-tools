@@ -14,17 +14,33 @@
   const metaBtn = editor.buildBtn("meta");
 
 metaBtn.on("click", function () {
+  const template = `<script type="application/json" class="entry-meta">
+{
+  "meta": {
+    "category": "",
+    "subcategory": "",
+    "tags": [
+      ""
+    ]
+  }
+}
+</script>`;
+
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
 
   textarea.setRangeText(
-    "[META TEST]",
+    template,
     start,
     end,
     "end"
   );
 
+  const marker = '"category": "';
+  const cursorPos = start + template.indexOf(marker) + marker.length;
+
   textarea.focus();
+  textarea.setSelectionRange(cursorPos, cursorPos);
 });
 
   const style = document.createElement("style");
