@@ -13,6 +13,20 @@
 
   const metaBtn = editor.buildBtn("meta");
 
+metaBtn.on("click", function () {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+
+  textarea.setRangeText(
+    "[META TEST]",
+    start,
+    end,
+    "end"
+  );
+
+  textarea.focus();
+});
+
   const style = document.createElement("style");
   style.textContent = `
     .trumbowyg-meta-button::before {
