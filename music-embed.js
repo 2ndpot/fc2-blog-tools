@@ -22,11 +22,7 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
       thumbnail.alt = "";
       thumbnail.loading = "lazy";
 
-      const play = document.createElement("span");
-      play.className = "youtube-lite-play";
-      play.textContent = "▶";
-
-      button.append(thumbnail, play);
+      button.appendChild(thumbnail);
       wrapper.appendChild(button);
       container.appendChild(wrapper);
 
