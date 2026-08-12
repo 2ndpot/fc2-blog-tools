@@ -18,7 +18,7 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
       button.setAttribute("aria-label", "YouTube動画を再生");
 
       const thumbnail = document.createElement("img");
-      thumbnail.src = `https://i.ytimg.com/vi/${data.youtube}/mqdefault.jpg`;
+      thumbnail.src = `https://i.ytimg.com/vi/${data.youtube}/hqdefault.jpg`;
       thumbnail.alt = "";
       thumbnail.loading = "lazy";
 
