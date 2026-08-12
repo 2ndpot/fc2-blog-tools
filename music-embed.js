@@ -9,16 +9,39 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
     const data = JSON.parse(dataElement.textContent);
 
     if (data.youtube) {
-      const iframe = document.createElement("iframe");
+      const wrapper = document.createElement("div");
+      wrapper.className = "youtube-lite";
 
-      iframe.width = "560";
-      iframe.height = "315";
-      iframe.src = `https://www.youtube.com/embed/${data.youtube}`;
-      iframe.title = "YouTube";
-      iframe.loading = "lazy";
-      iframe.allowFullscreen = true;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "youtube-lite-button";
+      button.setAttribute("aria-label", "YouTube動画を再生");
 
-      container.appendChild(iframe);
+      const thumbnail = document.createElement("img");
+      thumbnail.src = `https://i.ytimg.com/vi/${data.youtube}/hqdefault.jpg`;
+      thumbnail.alt = "";
+      thumbnail.loading = "lazy";
+
+      const play = document.createElement("span");
+      play.className = "youtube-lite-play";
+      play.textContent = "▶";
+
+      button.append(thumbnail, play);
+      wrapper.appendChild(button);
+      container.appendChild(wrapper);
+
+      button.addEventListener("click", () => {
+        const iframe = document.createElement("iframe");
+
+        iframe.width = "560";
+        iframe.height = "315";
+        iframe.src = `https://www.youtube.com/embed/${data.youtube}?autoplay=1`;
+        iframe.title = "YouTube";
+        iframe.allow = "autoplay; encrypted-media; picture-in-picture";
+        iframe.allowFullscreen = true;
+
+        wrapper.replaceWith(iframe);
+      });
     }
 
     const labels = {
