@@ -49,7 +49,7 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
       const list = document.createElement("ul");
       list.className = "track-list";
 
-      data.tracks.forEach((track) => {
+      data.tracks.forEach((track, trackIndex) => {
         const item = document.createElement("li");
         item.className = "track-item";
 
@@ -71,8 +71,18 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
           const playerId = `music-player-${data.youtube}`;
           const playerData = musicPlayers.get(playerId);
 
+          let targetStart = track.start;
+
+          if (track.skip) {
+            const nextTrack = data.tracks[trackIndex + 1];
+
+            if (nextTrack) {
+              targetStart = nextTrack.start;
+            }
+          }
+
           if (playerData?.player) {
-            playerData.player.seekTo(track.start, true);
+            playerData.player.seekTo(targetStart, true);
             playerData.player.playVideo();
             return;
           }
@@ -103,7 +113,8 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
 
           const newPlayerData = {
             player: null,
-            start: track.start
+            start: targetStart,
+            skipTimer: null
           };
 
           musicPlayers.set(playerId, newPlayerData);
@@ -113,6 +124,35 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
               onReady: (event) => {
                 event.target.seekTo(newPlayerData.start, true);
                 event.target.playVideo();
+
+                newPlayerData.skipTimer = setInterval(() => {
+                  const currentTime = event.target.getCurrentTime();
+
+                  data.tracks.forEach(
+                    (currentTrack, currentIndex) => {
+                      if (!currentTrack.skip) {
+                        return;
+                      }
+
+                      const nextTrack =
+                        data.tracks[currentIndex + 1];
+
+                      if (!nextTrack) {
+                        return;
+                      }
+
+                      if (
+                        currentTime >= currentTrack.start &&
+                        currentTime < nextTrack.start
+                      ) {
+                        event.target.seekTo(
+                          nextTrack.start,
+                          true
+                        );
+                      }
+                    }
+                  );
+                }, 500);
               }
             }
           });
