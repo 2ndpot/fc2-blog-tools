@@ -40,6 +40,39 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
         wrapper.replaceWith(iframe);
       });
     }
+
+    if (Array.isArray(data.tracks) && data.tracks.length > 1) {
+      const list = document.createElement("ul");
+      list.className = "track-list";
+
+      data.tracks.forEach((track) => {
+        const item = document.createElement("li");
+        item.className = "track-item";
+
+        if (track.skip) {
+          item.classList.add("track-skip");
+        }
+
+        const minutes = Math.floor(track.start / 60);
+        const seconds = track.start % 60;
+        const time = `${minutes}:${String(seconds).padStart(2, "0")}`;
+
+        const timeElement = document.createElement("span");
+        timeElement.className = "track-time";
+        timeElement.textContent = time;
+
+        const titleElement = document.createElement("span");
+        titleElement.className = "track-title";
+        titleElement.textContent = track.title;
+
+        item.appendChild(timeElement);
+        item.appendChild(titleElement);
+        list.appendChild(item);
+      });
+
+      container.appendChild(list);
+    }
+
   } catch (error) {
     console.error("music-data のJSONを読み取れませんでした。", error);
   }
