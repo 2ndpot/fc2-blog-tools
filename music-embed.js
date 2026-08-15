@@ -158,11 +158,27 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
           });
         });
 
+const playCount = document.createElement("select");
+playCount.className = "track-play-count";
+
+[0, 1, 2, 3].forEach((count) => {
+  const option = document.createElement("option");
+  option.value = count;
+  option.textContent = count;
+
+  if (count === (track.skip ? 0 : 1)) {
+    option.selected = true;
+  }
+
+  playCount.appendChild(option);
+});
+
         const titleElement = document.createElement("span");
         titleElement.className = "track-title";
         titleElement.textContent = track.title;
 
         item.appendChild(timeElement);
+        item.appendChild(playCount);
         item.appendChild(titleElement);
         list.appendChild(item);
       });
