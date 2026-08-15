@@ -1,3 +1,5 @@
+const musicPlayers = new Map();
+
 document.querySelectorAll(".music-data").forEach((dataElement) => {
   const entry = dataElement.closest(".entry");
   const container = entry?.querySelector(".music-embed");
@@ -32,9 +34,11 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
 
         iframe.width = "560";
         iframe.height = "315";
-        iframe.src = `https://www.youtube.com/embed/${data.youtube}?autoplay=1`;
+        iframe.src =
+          `https://www.youtube.com/embed/${data.youtube}?autoplay=1`;
         iframe.title = "YouTube";
-        iframe.allow = "autoplay; encrypted-media; picture-in-picture";
+        iframe.allow =
+          "autoplay; encrypted-media; picture-in-picture";
         iframe.allowFullscreen = true;
 
         wrapper.replaceWith(iframe);
@@ -55,11 +59,64 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
 
         const minutes = Math.floor(track.start / 60);
         const seconds = track.start % 60;
-        const time = `${minutes}:${String(seconds).padStart(2, "0")}`;
+        const time =
+          `${minutes}:${String(seconds).padStart(2, "0")}`;
 
-        const timeElement = document.createElement("span");
+        const timeElement = document.createElement("button");
+        timeElement.type = "button";
         timeElement.className = "track-time";
         timeElement.textContent = time;
+
+        timeElement.addEventListener("click", () => {
+          const playerId = `music-player-${data.youtube}`;
+          const playerData = musicPlayers.get(playerId);
+
+          if (playerData?.player) {
+            playerData.player.seekTo(track.start, true);
+            playerData.player.playVideo();
+            return;
+          }
+
+          let iframe = container.querySelector("iframe");
+
+          if (!iframe) {
+            const thumbnailButton =
+              container.querySelector(".youtube-lite-button");
+
+            if (thumbnailButton) {
+              thumbnailButton.click();
+              iframe = container.querySelector("iframe");
+            }
+          }
+
+          if (!iframe) {
+            return;
+          }
+
+          iframe.id = playerId;
+
+          const origin = encodeURIComponent(location.origin);
+
+          iframe.src =
+            `https://www.youtube.com/embed/${data.youtube}` +
+            `?autoplay=1&enablejsapi=1&origin=${origin}`;
+
+          const newPlayerData = {
+            player: null,
+            start: track.start
+          };
+
+          musicPlayers.set(playerId, newPlayerData);
+
+          newPlayerData.player = new YT.Player(playerId, {
+            events: {
+              onReady: (event) => {
+                event.target.seekTo(newPlayerData.start, true);
+                event.target.playVideo();
+              }
+            }
+          });
+        });
 
         const titleElement = document.createElement("span");
         titleElement.className = "track-title";
@@ -72,8 +129,10 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
 
       container.appendChild(list);
     }
-
   } catch (error) {
-    console.error("music-data のJSONを読み取れませんでした。", error);
+    console.error(
+      "music-data のJSONを読み取れませんでした。",
+      error
+    );
   }
 });
