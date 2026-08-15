@@ -1,7 +1,8 @@
 document.querySelectorAll(".music-data").forEach((dataElement) => {
-  const container = dataElement.previousElementSibling;
+  const entry = dataElement.closest(".entry");
+  const container = entry?.querySelector(".music-embed");
 
-  if (!container?.classList.contains("music-embed")) {
+  if (!container) {
     return;
   }
 
@@ -38,28 +39,6 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
 
         wrapper.replaceWith(iframe);
       });
-    }
-
-    const labels = {
-      lyrics: "作詞",
-      music: "作曲",
-      arrangement: "編曲",
-      choreography: "振付"
-    };
-
-    const credits = Object.entries(labels)
-      .filter(([key]) => data.credit?.[key])
-      .map(([key, label]) => `${label}:${data.credit[key]}`);
-
-    if (credits.length > 0) {
-      const p = document.createElement("p");
-      p.className = "credit";
-
-      const small = document.createElement("small");
-      small.textContent = credits.join("、");
-
-      p.appendChild(small);
-      container.appendChild(p);
     }
   } catch (error) {
     console.error("music-data のJSONを読み取れませんでした。", error);
