@@ -637,16 +637,22 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
         const time =
           `${minutes}:${String(seconds).padStart(2, "0")}`;
 
-        const timeElement =
-          document.createElement("button");
+        let timeElement;
 
-        timeElement.type = "button";
-        timeElement.className = "track-time";
-        timeElement.textContent = time;
+        if (track.skip) {
+          timeElement = document.createElement("span");
+          timeElement.className = "track-time track-time-fixed";
+          timeElement.textContent = time;
+        } else {
+          timeElement = document.createElement("button");
+          timeElement.type = "button";
+          timeElement.className = "track-time";
+          timeElement.textContent = time;
 
-        timeElement.addEventListener("click", () => {
-          requestPlay(trackIndex);
-        });
+          timeElement.addEventListener("click", () => {
+            requestPlay(trackIndex);
+          });
+        }
 
         let playCount;
 
