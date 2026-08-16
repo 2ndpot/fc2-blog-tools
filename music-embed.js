@@ -11,6 +11,24 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
   try {
     const data = JSON.parse(dataElement.textContent);
 
+const getPlayCount = (track) => {
+  if (track.skip) {
+    return 0;
+  }
+
+  return Number(track.playCountElement?.value ?? 1);
+};
+
+const getNextPlayableTrack = (trackIndex) => {
+  for (let i = trackIndex + 1; i < data.tracks.length; i++) {
+    if (getPlayCount(data.tracks[i]) !== 0) {
+      return data.tracks[i];
+    }
+  }
+
+  return null;
+};
+
     if (data.youtube) {
       const wrapper = document.createElement("div");
       wrapper.className = "youtube-lite";
@@ -71,15 +89,15 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
           const playerId = `music-player-${data.youtube}`;
           const playerData = musicPlayers.get(playerId);
 
-          let targetStart = track.start;
+let targetStart = track.start;
 
-          if (track.skip) {
-            const nextTrack = data.tracks[trackIndex + 1];
+if (getPlayCount(track) === 0) {
+  const nextTrack = getNextPlayableTrack(trackIndex);
 
-            if (nextTrack) {
-              targetStart = nextTrack.start;
-            }
-          }
+  if (nextTrack) {
+    targetStart = nextTrack.start;
+  }
+}
 
           if (playerData?.player) {
             playerData.player.seekTo(targetStart, true);
@@ -130,16 +148,16 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
 
                   data.tracks.forEach(
                     (currentTrack, currentIndex) => {
-                      if (!currentTrack.skip) {
-                        return;
-                      }
+if (getPlayCount(currentTrack) !== 0) {
+  return;
+}
 
-                      const nextTrack =
-                        data.tracks[currentIndex + 1];
+const nextTrack =
+  getNextPlayableTrack(currentIndex);
 
-                      if (!nextTrack) {
-                        return;
-                      }
+if (!nextTrack) {
+  return;
+}
 
                       if (
                         currentTime >= currentTrack.start &&
@@ -179,6 +197,7 @@ if (track.skip) {
 
     playCount.appendChild(option);
   });
+  track.playCountElement = playCount;
 }
 
         const titleElement = document.createElement("span");
