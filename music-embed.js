@@ -158,20 +158,28 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
           });
         });
 
-const playCount = document.createElement("select");
-playCount.className = "track-play-count";
+let playCount;
 
-[0, 1, 2, 3].forEach((count) => {
-  const option = document.createElement("option");
-  option.value = count;
-  option.textContent = count;
+if (track.skip) {
+  playCount = document.createElement("span");
+  playCount.className = "track-play-count track-play-count-fixed";
+  playCount.textContent = "0";
+} else {
+  playCount = document.createElement("select");
+  playCount.className = "track-play-count";
 
-  if (count === (track.skip ? 0 : 1)) {
-    option.selected = true;
-  }
+  [0, 1, 2, 3].forEach((count) => {
+    const option = document.createElement("option");
+    option.value = count;
+    option.textContent = count;
 
-  playCount.appendChild(option);
-});
+    if (count === 1) {
+      option.selected = true;
+    }
+
+    playCount.appendChild(option);
+  });
+}
 
         const titleElement = document.createElement("span");
         titleElement.className = "track-title";
