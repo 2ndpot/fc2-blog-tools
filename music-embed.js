@@ -1,6 +1,6 @@
 const musicPlayers = new Map();
 
-document.querySelectorAll(".music-data").forEach((dataElement) => {
+document.querySelectorAll(".music-data").forEach((dataElement, index) => {
   const entry = dataElement.closest(".entry");
   const container = entry?.querySelector(".music-embed");
 
@@ -10,6 +10,8 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
 
   try {
     const data = JSON.parse(dataElement.textContent);
+    const tracks = Array.isArray(data.tracks) ? data.tracks : [];
+    const playerId = `music-player-${index}`;
 
     const getPlayCount = (track) => {
       if (track.skip) {
@@ -19,14 +21,14 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
       return Number(track.playCountElement?.value ?? 1);
     };
 
-    const getNextPlayableTrack = (trackIndex) => {
-      for (let i = trackIndex + 1; i < data.tracks.length; i++) {
-        if (getPlayCount(data.tracks[i]) !== 0) {
-          return data.tracks[i];
+    const getNextPlayableIndex = (startIndex) => {
+      for (let i = startIndex; i < tracks.length; i++) {
+        if (getPlayCount(tracks[i]) !== 0) {
+          return i;
         }
       }
 
-      return null;
+      return -1;
     };
 
     const startPlayMonitor = (player, playerData) => {
@@ -37,8 +39,26 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
       playerData.skipTimer = setInterval(() => {
         const currentTime = player.getCurrentTime();
 
-        const currentIndex = data.tracks.findIndex((track, index) => {
-          const nextTrack = data.tracks[index + 1];
+        if (!Number.isFinite(currentTime)) {
+          return;
+        }
+
+        /*
+         * プログラム自身が seekTo() した直後は、
+         * 目的位置へ実際に到達するまで監視を保留する。
+         * これにより、シーク先の直前を再び0曲と判定して
+         * seekTo() を連打する現象を防ぐ。
+         */
+        if (playerData.seekingTo !== null) {
+          if (currentTime >= playerData.seekingTo) {
+            playerData.seekingTo = null;
+          } else {
+            return;
+          }
+        }
+
+        const currentIndex = tracks.findIndex((track, trackIndex) => {
+          const nextTrack = tracks[trackIndex + 1];
 
           return (
             currentTime >= track.start &&
@@ -50,24 +70,34 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
           return;
         }
 
-        const currentTrack = data.tracks[currentIndex];
+        const currentTrack = tracks[currentIndex];
 
+        /*
+         * 現在再生している曲だけを見る。
+         * 未来の曲を0に変更しても、現在曲には何もしない。
+         */
         if (getPlayCount(currentTrack) !== 0) {
           return;
         }
 
-        const nextTrack = getNextPlayableTrack(currentIndex);
+        const nextIndex = getNextPlayableIndex(currentIndex + 1);
 
-        if (nextTrack) {
-          player.seekTo(nextTrack.start, true);
-        } else {
-          player.stopVideo();
+        if (nextIndex === -1) {
+          player.pauseVideo();
+          return;
         }
-      }, 500);
+
+        const targetStart = tracks[nextIndex].start;
+
+        playerData.seekingTo = targetStart;
+        player.seekTo(targetStart, true);
+      }, 250);
     };
 
+    let wrapper = null;
+
     if (data.youtube) {
-      const wrapper = document.createElement("div");
+      wrapper = document.createElement("div");
       wrapper.className = "youtube-lite";
 
       const button = document.createElement("button");
@@ -84,59 +114,102 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
       button.appendChild(thumbnail);
       wrapper.appendChild(button);
       container.appendChild(wrapper);
+    }
 
-      button.addEventListener("click", () => {
-        const playerId = `music-player-${data.youtube}`;
-        const existingPlayerData = musicPlayers.get(playerId);
+    /*
+     * サムネスタートとリンクスタートの共通入口。
+     *
+     * trackIndex:
+     *   0     → 先頭から再生。ただし0指定曲は飛ばす
+     *   1以上 → 指定曲から再生。ただし0指定なら次の非0曲へ
+     */
+    const requestPlay = (trackIndex = 0) => {
+      let targetStart = 0;
 
-        if (existingPlayerData?.player) {
-          existingPlayerData.player.playVideo();
+      if (tracks.length > 0) {
+        const playableIndex = getNextPlayableIndex(trackIndex);
+
+        if (playableIndex === -1) {
+          const playerData = musicPlayers.get(playerId);
+
+          if (playerData?.player) {
+            playerData.player.pauseVideo();
+          }
+
           return;
         }
 
-        const iframe = document.createElement("iframe");
+        targetStart = tracks[playableIndex].start;
+      }
 
-        iframe.id = playerId;
-        iframe.width = "560";
-        iframe.height = "315";
+      const existingPlayerData = musicPlayers.get(playerId);
 
-        const origin = encodeURIComponent(location.origin);
+      if (existingPlayerData?.player) {
+        existingPlayerData.seekingTo = targetStart;
+        existingPlayerData.player.seekTo(targetStart, true);
+        existingPlayerData.player.playVideo();
+        return;
+      }
 
-        iframe.src =
-          `https://www.youtube.com/embed/${data.youtube}` +
-          `?autoplay=1&enablejsapi=1&origin=${origin}`;
+      if (!window.YT?.Player) {
+        console.error("YouTube IFrame Player API が読み込まれていません。");
+        return;
+      }
 
-        iframe.title = "YouTube";
-        iframe.allow =
-          "autoplay; encrypted-media; picture-in-picture";
-        iframe.allowFullscreen = true;
+      if (!wrapper) {
+        return;
+      }
 
-        wrapper.replaceWith(iframe);
+      const playerHost = document.createElement("div");
+      playerHost.id = playerId;
 
-        const playerData = {
-          player: null,
-          start: 0,
-          skipTimer: null
-        };
+      wrapper.replaceWith(playerHost);
 
-        musicPlayers.set(playerId, playerData);
+      const playerData = {
+        player: null,
+        skipTimer: null,
+        seekingTo: targetStart
+      };
 
-        playerData.player = new YT.Player(playerId, {
-          events: {
-            onReady: (event) => {
-              event.target.playVideo();
-              startPlayMonitor(event.target, playerData);
+      musicPlayers.set(playerId, playerData);
+
+      playerData.player = new YT.Player(playerId, {
+        width: "560",
+        height: "315",
+        videoId: data.youtube,
+        playerVars: {
+          autoplay: 1,
+          origin: location.origin
+        },
+        events: {
+          onReady: (event) => {
+            if (targetStart > 0) {
+              event.target.seekTo(targetStart, true);
+            } else {
+              playerData.seekingTo = null;
             }
+
+            event.target.playVideo();
+            startPlayMonitor(event.target, playerData);
           }
-        });
+        }
+      });
+    };
+
+    if (wrapper) {
+      const thumbnailButton =
+        wrapper.querySelector(".youtube-lite-button");
+
+      thumbnailButton.addEventListener("click", () => {
+        requestPlay(0);
       });
     }
 
-    if (Array.isArray(data.tracks) && data.tracks.length > 1) {
+    if (tracks.length > 1) {
       const list = document.createElement("ul");
       list.className = "track-list";
 
-      data.tracks.forEach((track, trackIndex) => {
+      tracks.forEach((track, trackIndex) => {
         const item = document.createElement("li");
         item.className = "track-item";
 
@@ -155,72 +228,7 @@ document.querySelectorAll(".music-data").forEach((dataElement) => {
         timeElement.textContent = time;
 
         timeElement.addEventListener("click", () => {
-          const playerId = `music-player-${data.youtube}`;
-          const playerData = musicPlayers.get(playerId);
-
-          let targetStart = track.start;
-
-          if (getPlayCount(track) === 0) {
-            const nextTrack = getNextPlayableTrack(trackIndex);
-
-            if (nextTrack) {
-              targetStart = nextTrack.start;
-            } else {
-              if (playerData?.player) {
-                playerData.player.stopVideo();
-              }
-
-              return;
-            }
-          }
-
-          if (playerData?.player) {
-            playerData.player.seekTo(targetStart, true);
-            playerData.player.playVideo();
-            return;
-          }
-
-          let iframe = container.querySelector("iframe");
-
-          if (!iframe) {
-            const thumbnailButton =
-              container.querySelector(".youtube-lite-button");
-
-            if (thumbnailButton) {
-              thumbnailButton.click();
-              iframe = container.querySelector("iframe");
-            }
-          }
-
-          if (!iframe) {
-            return;
-          }
-
-          iframe.id = playerId;
-
-          const origin = encodeURIComponent(location.origin);
-
-          iframe.src =
-            `https://www.youtube.com/embed/${data.youtube}` +
-            `?autoplay=1&enablejsapi=1&origin=${origin}`;
-
-          const newPlayerData = {
-            player: null,
-            start: targetStart,
-            skipTimer: null
-          };
-
-          musicPlayers.set(playerId, newPlayerData);
-
-          newPlayerData.player = new YT.Player(playerId, {
-            events: {
-              onReady: (event) => {
-                event.target.seekTo(newPlayerData.start, true);
-                event.target.playVideo();
-                startPlayMonitor(event.target, newPlayerData);
-              }
-            }
-          });
+          requestPlay(trackIndex);
         });
 
         let playCount;
