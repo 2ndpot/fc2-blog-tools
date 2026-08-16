@@ -96,9 +96,14 @@ if (getPlayCount(track) === 0) {
 
   if (nextTrack) {
     targetStart = nextTrack.start;
+  } else {
+    if (playerData?.player) {
+      playerData.player.stopVideo();
+    }
+
+    return;
   }
 }
-
           if (playerData?.player) {
             playerData.player.seekTo(targetStart, true);
             playerData.player.playVideo();
@@ -156,6 +161,7 @@ const nextTrack =
   getNextPlayableTrack(currentIndex);
 
 if (!nextTrack) {
+  event.target.stopVideo();
   return;
 }
 
