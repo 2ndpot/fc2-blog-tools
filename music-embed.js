@@ -31,6 +31,68 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       return -1;
     };
 
+    let wrapper = null;
+
+    const createThumbnail = () => {
+      const newWrapper = document.createElement("div");
+      newWrapper.className = "youtube-lite";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "youtube-lite-button";
+      button.setAttribute("aria-label", "YouTube動画を再生");
+
+      const thumbnail = document.createElement("img");
+      thumbnail.src =
+        `https://i.ytimg.com/vi/${data.youtube}/hqdefault.jpg`;
+      thumbnail.alt = "";
+      thumbnail.loading = "lazy";
+
+      button.appendChild(thumbnail);
+      newWrapper.appendChild(button);
+
+      const trackList = container.querySelector(".track-list");
+
+      if (trackList) {
+        container.insertBefore(newWrapper, trackList);
+      } else {
+        container.appendChild(newWrapper);
+      }
+
+      wrapper = newWrapper;
+
+      button.addEventListener("click", () => {
+        requestPlay(0);
+      });
+    };
+
+    const resetPlayer = () => {
+      const playerData = musicPlayers.get(playerId);
+
+      if (playerData?.skipTimer) {
+        clearInterval(playerData.skipTimer);
+      }
+
+      if (playerData?.player) {
+        try {
+          playerData.player.destroy();
+        } catch (error) {
+          console.error(
+            "YouTubeプレーヤーを破棄できませんでした。",
+            error
+          );
+        }
+      }
+
+      musicPlayers.delete(playerId);
+
+      container
+        .querySelectorAll(".youtube-lite")
+        .forEach((element) => element.remove());
+
+      createThumbnail();
+    };
+
     const startPlayMonitor = (player, playerData) => {
       if (playerData.skipTimer) {
         clearInterval(playerData.skipTimer);
@@ -44,10 +106,8 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
         }
 
         /*
-         * プログラム自身が seekTo() した直後は、
-         * 目的位置へ実際に到達するまで監視を保留する。
-         * これにより、シーク先の直前を再び0曲と判定して
-         * seekTo() を連打する現象を防ぐ。
+         * プログラム自身によるシーク中は、
+         * シーク先へ到達するまで監視を保留する。
          */
         if (playerData.seekingTo !== null) {
           if (currentTime >= playerData.seekingTo) {
@@ -73,8 +133,8 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
         const currentTrack = tracks[currentIndex];
 
         /*
-         * 現在再生している曲だけを見る。
-         * 未来の曲を0に変更しても、現在曲には何もしない。
+         * 現在再生中の曲だけを見る。
+         * 未来の曲を0にしても現在曲には影響しない。
          */
         if (getPlayCount(currentTrack) !== 0) {
           return;
@@ -82,8 +142,12 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
 
         const nextIndex = getNextPlayableIndex(currentIndex + 1);
 
+        /*
+         * 次に再生できる曲がないなら、
+         * プレイリスト終了として初期状態へ戻す。
+         */
         if (nextIndex === -1) {
-          player.pauseVideo();
+          resetPlayer();
           return;
         }
 
@@ -94,46 +158,20 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       }, 250);
     };
 
-    let wrapper = null;
-
-    if (data.youtube) {
-      wrapper = document.createElement("div");
-      wrapper.className = "youtube-lite";
-
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "youtube-lite-button";
-      button.setAttribute("aria-label", "YouTube動画を再生");
-
-      const thumbnail = document.createElement("img");
-      thumbnail.src =
-        `https://i.ytimg.com/vi/${data.youtube}/hqdefault.jpg`;
-      thumbnail.alt = "";
-      thumbnail.loading = "lazy";
-
-      button.appendChild(thumbnail);
-      wrapper.appendChild(button);
-      container.appendChild(wrapper);
-    }
-
-    /*
-     * サムネスタートとリンクスタートの共通入口。
-     *
-     * trackIndex:
-     *   0     → 先頭から再生。ただし0指定曲は飛ばす
-     *   1以上 → 指定曲から再生。ただし0指定なら次の非0曲へ
-     */
     const requestPlay = (trackIndex = 0) => {
       let targetStart = 0;
 
       if (tracks.length > 0) {
         const playableIndex = getNextPlayableIndex(trackIndex);
 
+        /*
+         * 指定位置以降に再生できる曲がない。
+         */
         if (playableIndex === -1) {
           const playerData = musicPlayers.get(playerId);
 
           if (playerData?.player) {
-            playerData.player.pauseVideo();
+            resetPlayer();
           }
 
           return;
@@ -152,7 +190,9 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       }
 
       if (!window.YT?.Player) {
-        console.error("YouTube IFrame Player API が読み込まれていません。");
+        console.error(
+          "YouTube IFrame Player API が読み込まれていません。"
+        );
         return;
       }
 
@@ -164,6 +204,7 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       playerHost.id = playerId;
 
       wrapper.replaceWith(playerHost);
+      wrapper = null;
 
       const playerData = {
         player: null,
@@ -191,18 +232,22 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
 
             event.target.playVideo();
             startPlayMonitor(event.target, playerData);
+          },
+
+          onStateChange: (event) => {
+            if (
+              event.data === YT.PlayerState.ENDED &&
+              musicPlayers.get(playerId)?.player
+            ) {
+              resetPlayer();
+            }
           }
         }
       });
     };
 
-    if (wrapper) {
-      const thumbnailButton =
-        wrapper.querySelector(".youtube-lite-button");
-
-      thumbnailButton.addEventListener("click", () => {
-        requestPlay(0);
-      });
+    if (data.youtube) {
+      createThumbnail();
     }
 
     if (tracks.length > 1) {
