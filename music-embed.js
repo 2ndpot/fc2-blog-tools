@@ -47,20 +47,50 @@ const getNextPlayableTrack = (trackIndex) => {
       wrapper.appendChild(button);
       container.appendChild(wrapper);
 
-      button.addEventListener("click", () => {
-        const iframe = document.createElement("iframe");
+button.addEventListener("click", () => {
+  const playerId = `music-player-${data.youtube}`;
 
-        iframe.width = "560";
-        iframe.height = "315";
-        iframe.src =
-          `https://www.youtube.com/embed/${data.youtube}?autoplay=1`;
-        iframe.title = "YouTube";
-        iframe.allow =
-          "autoplay; encrypted-media; picture-in-picture";
-        iframe.allowFullscreen = true;
+  if (musicPlayers.get(playerId)?.player) {
+    musicPlayers.get(playerId).player.playVideo();
+    return;
+  }
 
-        wrapper.replaceWith(iframe);
-      });
+  const iframe = document.createElement("iframe");
+
+  iframe.id = playerId;
+  iframe.width = "560";
+  iframe.height = "315";
+
+  const origin = encodeURIComponent(location.origin);
+
+  iframe.src =
+    `https://www.youtube.com/embed/${data.youtube}` +
+    `?autoplay=1&enablejsapi=1&origin=${origin}`;
+
+  iframe.title = "YouTube";
+  iframe.allow =
+    "autoplay; encrypted-media; picture-in-picture";
+  iframe.allowFullscreen = true;
+
+  wrapper.replaceWith(iframe);
+
+  const playerData = {
+    player: null,
+    start: 0,
+    skipTimer: null
+  };
+
+  musicPlayers.set(playerId, playerData);
+
+  playerData.player = new YT.Player(playerId, {
+    events: {
+      onReady: (event) => {
+        event.target.playVideo();
+      }
+    }
+  });
+});
+
     }
 
     if (Array.isArray(data.tracks) && data.tracks.length > 1) {
