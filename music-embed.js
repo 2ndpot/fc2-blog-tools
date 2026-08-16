@@ -121,7 +121,7 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       musicPlayers.delete(playerId);
 
       container
-        .querySelectorAll(".youtube-lite")
+        .querySelectorAll(".youtube-lite, .music-player-controls")
         .forEach((element) => element.remove());
 
       createThumbnail();
@@ -495,6 +495,21 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
 
       wrapper.replaceWith(playerHost);
       wrapper = null;
+
+      const playerControls = document.createElement("div");
+      playerControls.className = "music-player-controls";
+
+      const stopButton = document.createElement("button");
+      stopButton.type = "button";
+      stopButton.className = "music-player-stop";
+      stopButton.textContent = "■ 再生終了";
+
+      stopButton.addEventListener("click", () => {
+        resetPlayer();
+      });
+
+      playerControls.appendChild(stopButton);
+      playerHost.insertAdjacentElement("afterend", playerControls);
 
       const playerData = {
         player: null,
