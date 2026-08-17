@@ -24,6 +24,20 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       return Number(track.playCountElement?.value ?? 1);
     };
 
+      const getInitialPlayCount = (track) => {
+        if (track.skip) {
+          return 0;
+        }
+
+        const playCount = Number(track.playCount);
+
+        if ([0, 1, 2, 3].includes(playCount)) {
+          return playCount;
+        }
+
+        return 1;
+      };
+
     const getNextPlayableIndex = (startIndex) => {
       for (let i = startIndex; i < tracks.length; i++) {
         if (getPlayCount(tracks[i]) !== 0) {
@@ -680,6 +694,9 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
           playCount = document.createElement("select");
           playCount.className = "track-play-count";
 
+          const initialPlayCount =
+            getInitialPlayCount(track);
+
           [0, 1, 2, 3].forEach((count) => {
             const option =
               document.createElement("option");
@@ -687,7 +704,7 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
             option.value = count;
             option.textContent = count;
 
-            if (count === 1) {
+            if (count === initialPlayCount) {
               option.selected = true;
             }
 
