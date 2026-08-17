@@ -15,8 +15,8 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
 
     let sessionSerial = 0;
     let wrapper = null;
-
     let controls = null;
+    let playerArea = null;
 
     const createControls = () => {
       if (controls) {
@@ -91,19 +91,19 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       return Number(track.playCountElement?.value ?? 1);
     };
 
-      const getInitialPlayCount = (track) => {
-        if (track.skip) {
-          return 0;
-        }
+    const getInitialPlayCount = (track) => {
+      if (track.skip) {
+        return 0;
+      }
 
-        const playCount = Number(track.playCount);
+      const playCount = Number(track.playCount);
 
-        if ([0, 1, 2, 3].includes(playCount)) {
-          return playCount;
-        }
+      if ([0, 1, 2, 3].includes(playCount)) {
+        return playCount;
+      }
 
-        return 1;
-      };
+      return 1;
+    };
 
     const getNextPlayableIndex = (startIndex) => {
       for (let i = startIndex; i < tracks.length; i++) {
@@ -132,7 +132,32 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       });
     };
 
+    const createPlayerArea = () => {
+      if (playerArea) {
+        return;
+      }
+
+      const newPlayerArea = document.createElement("div");
+      newPlayerArea.className = "music-player-area";
+
+      const trackList = container.querySelector(".track-list");
+
+      if (controls?.isConnected) {
+        container.insertBefore(newPlayerArea, controls);
+      } else if (trackList) {
+        container.insertBefore(newPlayerArea, trackList);
+      } else {
+        container.appendChild(newPlayerArea);
+      }
+
+      playerArea = newPlayerArea;
+    };
+
     const createThumbnail = () => {
+      if (!playerArea) {
+        createPlayerArea();
+      }
+
       const newWrapper = document.createElement("div");
       newWrapper.className = "youtube-lite";
 
@@ -150,15 +175,7 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       button.appendChild(thumbnail);
       newWrapper.appendChild(button);
 
-      const trackList = container.querySelector(".track-list");
-
-      if (controls?.isConnected) {
-        container.insertBefore(newWrapper, controls);
-      } else if (trackList) {
-        container.insertBefore(newWrapper, trackList);
-      } else {
-        container.appendChild(newWrapper);
-      }
+      playerArea.appendChild(newWrapper);
 
       wrapper = newWrapper;
 
@@ -203,8 +220,8 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
 
       musicPlayers.delete(playerId);
 
-      container
-        .querySelectorAll(".youtube-lite")
+      playerArea
+        ?.querySelectorAll(".youtube-lite")
         .forEach((element) => element.remove());
 
       controls
@@ -212,7 +229,6 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
         .forEach((element) => element.remove());
 
       createThumbnail();
-
     };
 
     const beginSession = (playerData, trackIndex) => {
@@ -587,7 +603,7 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       const stopButton = document.createElement("button");
       stopButton.type = "button";
       stopButton.className = "music-player-stop";
-      stopButton.textContent = "■ 再生終了";
+      stopButton.textContent = "再生終了";
 
       stopButton.addEventListener("click", () => {
         resetPlayer();
@@ -714,6 +730,7 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
     };
 
     if (data.youtube) {
+      createPlayerArea();
       createThumbnail();
       createControls();
     }
