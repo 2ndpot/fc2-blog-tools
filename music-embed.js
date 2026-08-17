@@ -47,6 +47,16 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       universalButton.className = "music-player-universal";
       universalButton.textContent = "博愛";
 
+      universalButton.addEventListener("click", () => {
+        tracks.forEach((track) => {
+          if (track.skip || !track.playCountElement) {
+            return;
+          }
+
+          track.playCountElement.value = "1";
+        });
+      });
+
       newControls.appendChild(favoriteButton);
       newControls.appendChild(universalButton);
 
