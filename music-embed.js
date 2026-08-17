@@ -119,7 +119,9 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
 
       const trackList = container.querySelector(".track-list");
 
-      if (trackList) {
+      if (controls?.isConnected) {
+        container.insertBefore(newWrapper, controls);
+      } else if (trackList) {
         container.insertBefore(newWrapper, trackList);
       } else {
         container.appendChild(newWrapper);
