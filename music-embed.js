@@ -17,6 +17,7 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
     let wrapper = null;
     let controls = null;
     let playerArea = null;
+    let playerSlot = null;
 
     const createControls = () => {
       if (controls) {
@@ -140,6 +141,11 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       const newPlayerArea = document.createElement("div");
       newPlayerArea.className = "music-player-area";
 
+      const newPlayerSlot = document.createElement("div");
+      newPlayerSlot.className = "music-player-slot";
+
+      newPlayerArea.appendChild(newPlayerSlot);
+
       const trackList = container.querySelector(".track-list");
 
       if (controls?.isConnected) {
@@ -151,11 +157,29 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       }
 
       playerArea = newPlayerArea;
+      playerSlot = newPlayerSlot;
+    };
+
+    const renewPlayerSlot = () => {
+      const newPlayerSlot = document.createElement("div");
+      newPlayerSlot.className = "music-player-slot";
+
+      if (playerSlot?.isConnected) {
+        playerSlot.replaceWith(newPlayerSlot);
+      } else {
+        playerArea.appendChild(newPlayerSlot);
+      }
+
+      playerSlot = newPlayerSlot;
     };
 
     const createThumbnail = () => {
       if (!playerArea) {
         createPlayerArea();
+      }
+
+      if (!playerSlot) {
+        renewPlayerSlot();
       }
 
       const newWrapper = document.createElement("div");
@@ -175,7 +199,7 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       button.appendChild(thumbnail);
       newWrapper.appendChild(button);
 
-      playerArea.appendChild(newWrapper);
+      playerSlot.appendChild(newWrapper);
 
       wrapper = newWrapper;
 
@@ -220,7 +244,13 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
 
       musicPlayers.delete(playerId);
 
-      playerArea?.replaceChildren();
+      /*
+       * プレーヤー用スロットそのものを新品へ交換する。
+       * 古いYouTubeプレーヤーが遅れてDOMを触っても、
+       * その変更は切り離された古いスロット内に閉じ込める。
+       */
+      renewPlayerSlot();
+      wrapper = null;
 
       controls
         ?.querySelectorAll(".music-player-stop")
