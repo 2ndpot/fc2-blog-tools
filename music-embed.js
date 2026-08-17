@@ -16,6 +16,40 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
     let sessionSerial = 0;
     let wrapper = null;
 
+    let controls = null;
+
+    const createControls = () => {
+      if (controls) {
+        return;
+      }
+
+      const newControls = document.createElement("div");
+      newControls.className = "music-player-controls";
+
+      const favoriteButton = document.createElement("button");
+      favoriteButton.type = "button";
+      favoriteButton.className = "music-player-favorite";
+      favoriteButton.textContent = "偏愛";
+
+      const universalButton = document.createElement("button");
+      universalButton.type = "button";
+      universalButton.className = "music-player-universal";
+      universalButton.textContent = "博愛";
+
+      newControls.appendChild(favoriteButton);
+      newControls.appendChild(universalButton);
+
+      const trackList = container.querySelector(".track-list");
+
+      if (trackList) {
+        container.insertBefore(newControls, trackList);
+      } else {
+        container.appendChild(newControls);
+      }
+
+      controls = newControls;
+    };
+
     const getPlayCount = (track) => {
       if (track.skip) {
         return 0;
@@ -135,10 +169,15 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       musicPlayers.delete(playerId);
 
       container
-        .querySelectorAll(".youtube-lite, .music-player-controls")
+        .querySelectorAll(".youtube-lite")
+        .forEach((element) => element.remove());
+
+      controls
+        ?.querySelectorAll(".music-player-stop")
         .forEach((element) => element.remove());
 
       createThumbnail();
+
     };
 
     const beginSession = (playerData, trackIndex) => {
@@ -510,9 +549,6 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       wrapper.replaceWith(playerHost);
       wrapper = null;
 
-      const playerControls = document.createElement("div");
-      playerControls.className = "music-player-controls";
-
       const stopButton = document.createElement("button");
       stopButton.type = "button";
       stopButton.className = "music-player-stop";
@@ -522,8 +558,7 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
         resetPlayer();
       });
 
-      playerControls.appendChild(stopButton);
-      playerHost.insertAdjacentElement("afterend", playerControls);
+      controls.appendChild(stopButton);
 
       const playerData = {
         player: null,
@@ -645,6 +680,7 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
 
     if (data.youtube) {
       createThumbnail();
+      createControls();
     }
 
     if (tracks.length > 1) {
