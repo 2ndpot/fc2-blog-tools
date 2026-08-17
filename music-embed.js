@@ -30,6 +30,12 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       favoriteButton.type = "button";
       favoriteButton.className = "music-player-favorite";
       favoriteButton.textContent = "偏愛";
+      favoriteButton.title =
+        "再生回数を作者の設定に戻す";
+      favoriteButton.setAttribute(
+        "aria-label",
+        "再生回数を作者の設定に戻す"
+      );
 
       favoriteButton.addEventListener("click", () => {
         tracks.forEach((track) => {
@@ -46,6 +52,12 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       universalButton.type = "button";
       universalButton.className = "music-player-universal";
       universalButton.textContent = "博愛";
+      universalButton.title =
+        "再生可能な曲をすべて1回にする";
+      universalButton.setAttribute(
+        "aria-label",
+        "再生可能な曲をすべて1回にする"
+      );
 
       universalButton.addEventListener("click", () => {
         tracks.forEach((track) => {
