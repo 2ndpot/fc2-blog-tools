@@ -31,6 +31,17 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       favoriteButton.className = "music-player-favorite";
       favoriteButton.textContent = "偏愛";
 
+      favoriteButton.addEventListener("click", () => {
+        tracks.forEach((track) => {
+          if (track.skip || !track.playCountElement) {
+            return;
+          }
+
+          track.playCountElement.value =
+            String(getInitialPlayCount(track));
+        });
+      });
+
       const universalButton = document.createElement("button");
       universalButton.type = "button";
       universalButton.className = "music-player-universal";
