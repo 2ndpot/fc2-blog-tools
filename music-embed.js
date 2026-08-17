@@ -218,6 +218,10 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
         }
       }
 
+      playerArea
+        ?.querySelectorAll(`[id="${playerId}"]`)
+        .forEach((element) => element.remove());
+
       musicPlayers.delete(playerId);
 
       playerArea
