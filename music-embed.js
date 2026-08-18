@@ -774,23 +774,28 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
     }
 
     if (tracks.length > 1) {
-      const list = document.createElement("ul");
-      list.className = "track-list";
+      const table = document.createElement("table");
+      table.className = "track-table";
+
+      const tbody = document.createElement("tbody");
 
       tracks.forEach((track, trackIndex) => {
-        const item = document.createElement("li");
-        item.className = "track-item";
+        const row = document.createElement("tr");
+        row.className = "track-item";
 
         track.completedCount = 0;
 
         if (track.skip) {
-          item.classList.add("track-skip");
+          row.classList.add("track-skip");
         }
 
         const minutes = Math.floor(track.start / 60);
         const seconds = track.start % 60;
         const time =
           `${minutes}:${String(seconds).padStart(2, "0")}`;
+
+        const timeCell = document.createElement("td");
+        timeCell.className = "track-time-cell";
 
         let timeElement;
 
@@ -808,6 +813,11 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
             requestPlay(trackIndex);
           });
         }
+
+        timeCell.appendChild(timeElement);
+
+        const playCountCell = document.createElement("td");
+        playCountCell.className = "track-play-count-cell";
 
         let playCount;
 
@@ -840,19 +850,21 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
           track.playCountElement = playCount;
         }
 
-        const titleElement =
-          document.createElement("span");
+        playCountCell.appendChild(playCount);
 
-        titleElement.className = "track-title";
-        titleElement.textContent = track.title;
+        const titleCell = document.createElement("td");
+        titleCell.className = "track-title-cell";
+        titleCell.textContent = track.title;
 
-        item.appendChild(timeElement);
-        item.appendChild(playCount);
-        item.appendChild(titleElement);
-        list.appendChild(item);
+        row.appendChild(timeCell);
+        row.appendChild(playCountCell);
+        row.appendChild(titleCell);
+
+        tbody.appendChild(row);
       });
 
-      container.appendChild(list);
+      table.appendChild(tbody);
+      container.appendChild(table);
     }
   } catch (error) {
     console.error(
