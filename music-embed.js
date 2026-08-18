@@ -70,8 +70,19 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
         });
       });
 
+      const stopButton = document.createElement("button");
+      stopButton.type = "button";
+      stopButton.className = "music-player-stop";
+      stopButton.textContent = "再生終了";
+      stopButton.hidden = true;
+
+      stopButton.addEventListener("click", () => {
+        resetPlayer();
+      });
+
       newControls.appendChild(favoriteButton);
       newControls.appendChild(universalButton);
+      newControls.appendChild(stopButton);
 
       const trackList = container.querySelector(".track-list");
 
@@ -252,9 +263,12 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       renewPlayerSlot();
       wrapper = null;
 
-      controls
-        ?.querySelectorAll(".music-player-stop")
-        .forEach((element) => element.remove());
+      const stopButton =
+        controls?.querySelector(".music-player-stop");
+
+      if (stopButton) {
+        stopButton.hidden = true;
+      }
 
       createThumbnail();
     };
@@ -628,16 +642,12 @@ document.querySelectorAll(".music-data").forEach((dataElement, index) => {
       wrapper.replaceWith(playerHost);
       wrapper = null;
 
-      const stopButton = document.createElement("button");
-      stopButton.type = "button";
-      stopButton.className = "music-player-stop";
-      stopButton.textContent = "再生終了";
+      const stopButton =
+        controls?.querySelector(".music-player-stop");
 
-      stopButton.addEventListener("click", () => {
-        resetPlayer();
-      });
-
-      controls.appendChild(stopButton);
+      if (stopButton) {
+        stopButton.hidden = false;
+      }
 
       const playerData = {
         player: null,
