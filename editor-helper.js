@@ -14,14 +14,11 @@
   const metaBtn = editor.buildBtn("meta");
 
 metaBtn.on("click", function () {
-  const template = `<script type="application/json" class="entry-meta">
+  const template = `<script type="application/json">
 {
   "meta": {
     "category": "",
-    "subcategory": "",
-    "tags": [
-      ""
-    ]
+    "subcategory": ""
   }
 }
 </script>`;
