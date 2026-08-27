@@ -43,9 +43,9 @@
         </div>
       </div>
       <div class="yts-controls">
-        <button class="yts-btn yts-btn-primary" id="yts-btn-preset">プリセットに戻す</button>
-        <button class="yts-btn" id="yts-btn-all1">全曲1回（標準）</button>
-        <button class="yts-btn yts-btn-danger" id="yts-btn-stop">緊急停止</button>
+        <button class="yts-btn yts-btn-primary" id="yts-btn-preset">偏愛(プリセット)</button>
+        <button class="yts-btn" id="yts-btn-all1">博愛(全曲1回）</button>
+        <button class="yts-btn yts-btn-danger" id="yts-btn-stop">停止</button>
       </div>
       <table class="yts-table">
         <thead>
