@@ -33,11 +33,9 @@
       return;
     }
 
-    // 操作卓コンテナ作成
     const appContainer = document.createElement('div');
     appContainer.className = 'yts-app';
     
-    // DOM構造を展開（要改善点3: タイトル・メモ表示を削除）
     appContainer.innerHTML = `
       <div class="yts-player-wrapper">
         <div class="yts-embed-responsive">
@@ -62,7 +60,6 @@
       </table>
     `;
 
-    // JSONタグの直後に作成したコンテナを挿入
     jsonScript.parentNode.insertBefore(appContainer, jsonScript.nextSibling);
 
     initTracks();
@@ -93,11 +90,9 @@
       tr.id = `yts-track-row-${track.index}`;
       tr.className = 'yts-track-row';
       
-      // 要改善点4: 再生回数0の行は初期表示でグレーアウト
       if (track.currentCount === 0) tr.classList.add('disabled');
 
       const tdTime = document.createElement('td');
-      // 要改善点5: カーソルを人差し指（pointer）にするためスタイル指定を確実に
       tdTime.innerHTML = `<span class="yts-time-link" data-index="${track.index}">${track.time}</span>`;
 
       const tdCount = document.createElement('td');
@@ -137,18 +132,26 @@
     document.getElementById('yts-btn-stop').addEventListener('click', emergencyStop);
   }
 
-  // YouTube API Ready コールバック（要改善点1: 自動再生は行わない）
   window.onYouTubeIframeAPIReady = function() {
     if (!masterData) return;
     player = new YT.Player('yts-yt-player', {
       videoId: masterData.videoId,
       events: {
         'onReady': () => { 
-          // 時間監視ループのセット（再生はさせず監視だけ待機）
-          timer = setInterval(checkTimeLoop, 100); 
+          // 監視ループ開始
+          if (!timer) timer = setInterval(checkTimeLoop, 100); 
         },
         'onStateChange': (e) => {
-          if (e.data === YT.PlayerState.PLAYING) syncCurrentTrackIndex();
+          if (e.data === YT.PlayerState.PLAYING) {
+            // 動画ロード完了時、最終曲の終了秒数を「動画全体の長さ」に設定（【6】の修正）
+            if (player && typeof player.getDuration === 'function') {
+              const duration = player.getDuration();
+              if (duration > 0 && tracks.length > 0) {
+                tracks[tracks.length - 1].endSec = duration;
+              }
+            }
+            syncCurrentTrackIndex();
+          }
         }
       }
     });
@@ -157,7 +160,7 @@
   function checkTimeLoop() {
     if (!player || !isAutoControlEnabled || typeof player.getCurrentTime !== 'function') return;
     
-    // 動画が再生中（PLAYING: 1）の時のみスキップ/リピート制御を行う
+    // 再生中のみ制御を実行
     if (player.getPlayerState && player.getPlayerState() !== YT.PlayerState.PLAYING) return;
 
     const currentTime = player.getCurrentTime();
@@ -202,12 +205,17 @@
 
   function jumpToTrack(index) {
     if (index < 0 || index >= tracks.length) return;
+    
+    // 手動操作で曲を飛ばした場合は自動制御を復帰（【7】の修正）
+    isAutoControlEnabled = true;
+    updateToggleButton();
+
     currentTrackIndex = index;
     currentLoop = 1;
     updateRowHighlights();
     if (player && typeof player.seekTo === 'function') {
       player.seekTo(tracks[index].startSec, true);
-      player.playVideo(); // ユーザー操作（クリック）で明示的に再生を開始
+      player.playVideo();
     }
   }
 
@@ -233,7 +241,6 @@
         row.classList.remove('active');
       }
 
-      // 要改善点4: 再生回数0の曲の行をグレーアウト
       if (t.currentCount === 0) {
         row.classList.add('disabled');
       } else {
@@ -267,18 +274,20 @@
 
   function toggleAutoControl() {
     isAutoControlEnabled = !isAutoControlEnabled;
-    const btn = document.getElementById('yts-btn-toggle');
-    btn.textContent = `自動制御: ${isAutoControlEnabled ? 'ON' : 'OFF'}`;
+    updateToggleButton();
   }
 
-  // 要改善点2: 確認メッセージを出さず即座に停止
+  function updateToggleButton() {
+    const btn = document.getElementById('yts-btn-toggle');
+    if (btn) btn.textContent = `自動制御: ${isAutoControlEnabled ? 'ON' : 'OFF'}`;
+  }
+
+  // 【7】修正：タイマー破棄を廃止し、動画停止とフラグOFFのみ実行
   function emergencyStop() {
-    if (timer) clearInterval(timer);
     isAutoControlEnabled = false;
+    updateToggleButton();
     if (player && typeof player.pauseVideo === 'function') {
       player.pauseVideo();
     }
-    const btn = document.getElementById('yts-btn-toggle');
-    if (btn) btn.textContent = '自動制御: OFF';
   }
 })();
