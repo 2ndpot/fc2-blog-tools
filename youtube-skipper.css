@@ -15,6 +15,7 @@
   height: 0;
   overflow: hidden;
   background: #000;
+  transition: filter 0.3s;
 }
 
 .yts-embed-responsive iframe {
@@ -25,11 +26,39 @@
   height: 100%;
 }
 
+/* プレイリストナビゲーションバー */
+.yts-playlist-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  background: #f8f9fa;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.yts-select-video {
+  flex-grow: 1;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.yts-btn-sm {
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
 /* ボタン群 */
 .yts-controls {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
   margin-bottom: 12px;
 }
 
@@ -47,6 +76,13 @@
 .yts-btn-primary:hover { background: #0056b3; }
 .yts-btn-danger { background: #dc3545; color: #fff; border-color: #bd2130; }
 .yts-btn-danger:hover { background: #bd2130; }
+
+/* フィルター選択セレクトボックス */
+.yts-filter-select {
+  margin-left: auto;
+  border-color: #aaa;
+  background-color: #fff8f0;
+}
 
 /* テーブル */
 .yts-table {
@@ -92,41 +128,44 @@
   transition: background-color 0.2s, opacity 0.2s;
 }
 
-/* 再生中の強調（boldなし） */
 .yts-track-row.active {
   background-color: #e3f2fd;
   color: cadetblue;
 }
 
-/* 再生回数0の行のグレーアウト（background-color指定を削除） */
 .yts-track-row.disabled {
   opacity: 0.4;
   color: #888;
 }
 
-/* プレイリストナビゲーションバー */
-.yts-playlist-nav {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  background: #f8f9fa;
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: 1px solid #e9ecef;
+/* --- 昭和レトロフィルター演出 --- */
+/* モノクロ */
+.yts-filter-bw iframe {
+  filter: grayscale(100%) contrast(120%);
 }
 
-.yts-select-video {
-  flex-grow: 1;
-  padding: 4px 8px;
-  font-size: 0.85rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
+/* セピア */
+.yts-filter-sepia iframe {
+  filter: sepia(85%) contrast(110%) brightness(90%);
 }
 
-.yts-btn-sm {
-  padding: 4px 8px;
-  font-size: 0.8rem;
-  white-space: nowrap;
+/* 8mmフィルム（チラチラ感 ＋ アニメーション） */
+.yts-filter-film iframe {
+  filter: sepia(65%) contrast(135%) brightness(88%);
+  animation: yts-film-flicker 0.12s infinite alternate;
+}
+
+@keyframes yts-film-flicker {
+  0% {
+    opacity: 0.92;
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    opacity: 0.98;
+    transform: scale(1.002) translate(-0.5px, 0.5px);
+  }
+  100% {
+    opacity: 0.88;
+    transform: scale(1) translate(0.5px, -0.5px);
+  }
 }

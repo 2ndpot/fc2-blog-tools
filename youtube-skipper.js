@@ -26,7 +26,6 @@
         return;
       }
 
-      // 単一動画データも複数動画（playlist）構造に統一化
       let playlist = [];
       if (rawData.videos && Array.isArray(rawData.videos)) {
         playlist = rawData.videos;
@@ -38,7 +37,6 @@
         }];
       }
 
-      // トラックデータの初期化（秒数計算など）
       playlist.forEach(vid => {
         vid.parsedTracks = vid.tracks.map((t, index) => ({
           ...t,
@@ -69,6 +67,7 @@
       
       const isMulti = playlist.length > 1;
 
+      // 操作卓にレトロフィルター切替（yts-select-filter）を追加
       appContainer.innerHTML = `
         ${isMulti ? `
         <div class="yts-playlist-nav">
@@ -78,7 +77,7 @@
         </div>
         ` : ''}
         <div class="yts-player-wrapper">
-          <div class="yts-embed-responsive">
+          <div class="yts-embed-responsive" id="yts-embed-${appIndex}">
             <div id="yts-yt-player-${appIndex}"></div>
           </div>
         </div>
@@ -86,12 +85,18 @@
           <button class="yts-btn yts-btn-primary" id="yts-btn-preset-${appIndex}">プリセット</button>
           <button class="yts-btn" id="yts-btn-all1-${appIndex}">全曲1回</button>
           <button class="yts-btn yts-btn-danger" id="yts-btn-stop-${appIndex}">停止</button>
+          <select class="yts-select yts-filter-select" id="yts-select-filter-${appIndex}">
+            <option value="none">🎬 現代 (カラー)</option>
+            <option value="bw">📷 昭和モノクロ</option>
+            <option value="sepia">📜 昭和セピア</option>
+            <option value="film">🎞️ 8mmフィルム</option>
+          </select>
         </div>
         <table class="yts-table">
           <thead>
             <tr>
               <th style="width: 15%;">時間</th>
-              <th style="width: 20%;">再生回数</th>
+              <th style="width: 20%;">リピ回数</th>
               <th style="width: 15%;">n周目</th>
               <th>トラック名</th>
             </tr>
@@ -225,6 +230,19 @@
     document.getElementById(`yts-btn-preset-${inst.appIndex}`).addEventListener('click', () => resetToPreset(inst));
     document.getElementById(`yts-btn-all1-${inst.appIndex}`).addEventListener('click', () => setAllTo(inst, 1));
     document.getElementById(`yts-btn-stop-${inst.appIndex}`).addEventListener('click', () => emergencyStop(inst));
+
+    // 昭和レトロフィルターの切り替えイベント処理
+    const filterSelect = document.getElementById(`yts-select-filter-${inst.appIndex}`);
+    const embedWrapper = document.getElementById(`yts-embed-${inst.appIndex}`);
+    
+    if (filterSelect && embedWrapper) {
+      filterSelect.addEventListener('change', (e) => {
+        embedWrapper.classList.remove('yts-filter-bw', 'yts-filter-sepia', 'yts-filter-film');
+        if (e.target.value !== 'none') {
+          embedWrapper.classList.add(`yts-filter-${e.target.value}`);
+        }
+      });
+    }
   }
 
   window.onYouTubeIframeAPIReady = function() {
@@ -288,7 +306,6 @@
           if (!isLastValidTrack) {
             skipToNextValidTrack(inst, inst.currentTrackIndex + 1);
           } else {
-            // プレイリストの次の動画へ自動リレー
             if (inst.currentVideoIndex < inst.playlist.length - 1) {
               switchVideo(inst, inst.currentVideoIndex + 1, true);
             }
