@@ -7,7 +7,6 @@
 
   let player = null;
   let timer = null;
-  let isAutoControlEnabled = true;
   let currentTrackIndex = -1;
   let currentLoop = 1;
   let tracks = [];
@@ -36,6 +35,7 @@
     const appContainer = document.createElement('div');
     appContainer.className = 'yts-app';
     
+    // 操作卓（「自動制御」ボタンを削除してスッキリ化）
     appContainer.innerHTML = `
       <div class="yts-player-wrapper">
         <div class="yts-embed-responsive">
@@ -45,7 +45,6 @@
       <div class="yts-controls">
         <button class="yts-btn yts-btn-primary" id="yts-btn-preset">プリセットに戻す</button>
         <button class="yts-btn" id="yts-btn-all1">全曲1回（標準）</button>
-        <button class="yts-btn" id="yts-btn-toggle">自動制御: ON</button>
         <button class="yts-btn yts-btn-danger" id="yts-btn-stop">緊急停止</button>
       </div>
       <table class="yts-table">
@@ -128,7 +127,6 @@
   function bindEvents() {
     document.getElementById('yts-btn-preset').addEventListener('click', resetToPreset);
     document.getElementById('yts-btn-all1').addEventListener('click', () => setAllTo(1));
-    document.getElementById('yts-btn-toggle').addEventListener('click', toggleAutoControl);
     document.getElementById('yts-btn-stop').addEventListener('click', emergencyStop);
   }
 
@@ -138,12 +136,10 @@
       videoId: masterData.videoId,
       events: {
         'onReady': () => { 
-          // 監視ループ開始
           if (!timer) timer = setInterval(checkTimeLoop, 100); 
         },
         'onStateChange': (e) => {
           if (e.data === YT.PlayerState.PLAYING) {
-            // 動画ロード完了時、最終曲の終了秒数を「動画全体の長さ」に設定（【6】の修正）
             if (player && typeof player.getDuration === 'function') {
               const duration = player.getDuration();
               if (duration > 0 && tracks.length > 0) {
@@ -158,9 +154,9 @@
   };
 
   function checkTimeLoop() {
-    if (!player || !isAutoControlEnabled || typeof player.getCurrentTime !== 'function') return;
+    if (!player || typeof player.getCurrentTime !== 'function') return;
     
-    // 再生中のみ制御を実行
+    // 再生中のみループ制御
     if (player.getPlayerState && player.getPlayerState() !== YT.PlayerState.PLAYING) return;
 
     const currentTime = player.getCurrentTime();
@@ -206,10 +202,6 @@
   function jumpToTrack(index) {
     if (index < 0 || index >= tracks.length) return;
     
-    // 手動操作で曲を飛ばした場合は自動制御を復帰（【7】の修正）
-    isAutoControlEnabled = true;
-    updateToggleButton();
-
     currentTrackIndex = index;
     currentLoop = 1;
     updateRowHighlights();
@@ -272,20 +264,8 @@
     updateRowHighlights();
   }
 
-  function toggleAutoControl() {
-    isAutoControlEnabled = !isAutoControlEnabled;
-    updateToggleButton();
-  }
-
-  function updateToggleButton() {
-    const btn = document.getElementById('yts-btn-toggle');
-    if (btn) btn.textContent = `自動制御: ${isAutoControlEnabled ? 'ON' : 'OFF'}`;
-  }
-
-  // 【7】修正：タイマー破棄を廃止し、動画停止とフラグOFFのみ実行
+  // 緊急停止（即座に一時停止するのみ）
   function emergencyStop() {
-    isAutoControlEnabled = false;
-    updateToggleButton();
     if (player && typeof player.pauseVideo === 'function') {
       player.pauseVideo();
     }
