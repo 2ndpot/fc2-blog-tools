@@ -37,10 +37,8 @@
     const appContainer = document.createElement('div');
     appContainer.className = 'yts-app';
     
-    // DOM構造を展開
+    // DOM構造を展開（要改善点3: タイトル・メモ表示を削除）
     appContainer.innerHTML = `
-      <h2 class="yts-title">${masterData.artist || ''} - 鑑賞卓</h2>
-      <div class="yts-memo">${masterData.memo || ''}</div>
       <div class="yts-player-wrapper">
         <div class="yts-embed-responsive">
           <div id="yts-yt-player"></div>
@@ -94,9 +92,12 @@
       const tr = document.createElement('tr');
       tr.id = `yts-track-row-${track.index}`;
       tr.className = 'yts-track-row';
+      
+      // 要改善点4: 再生回数0の行は初期表示でグレーアウト
       if (track.currentCount === 0) tr.classList.add('disabled');
 
       const tdTime = document.createElement('td');
+      // 要改善点5: カーソルを人差し指（pointer）にするためスタイル指定を確実に
       tdTime.innerHTML = `<span class="yts-time-link" data-index="${track.index}">${track.time}</span>`;
 
       const tdCount = document.createElement('td');
@@ -136,13 +137,16 @@
     document.getElementById('yts-btn-stop').addEventListener('click', emergencyStop);
   }
 
-  // YouTube API Ready コールバック
+  // YouTube API Ready コールバック（要改善点1: 自動再生は行わない）
   window.onYouTubeIframeAPIReady = function() {
     if (!masterData) return;
     player = new YT.Player('yts-yt-player', {
       videoId: masterData.videoId,
       events: {
-        'onReady': () => { timer = setInterval(checkTimeLoop, 100); },
+        'onReady': () => { 
+          // 時間監視ループのセット（再生はさせず監視だけ待機）
+          timer = setInterval(checkTimeLoop, 100); 
+        },
         'onStateChange': (e) => {
           if (e.data === YT.PlayerState.PLAYING) syncCurrentTrackIndex();
         }
@@ -152,6 +156,10 @@
 
   function checkTimeLoop() {
     if (!player || !isAutoControlEnabled || typeof player.getCurrentTime !== 'function') return;
+    
+    // 動画が再生中（PLAYING: 1）の時のみスキップ/リピート制御を行う
+    if (player.getPlayerState && player.getPlayerState() !== YT.PlayerState.PLAYING) return;
+
     const currentTime = player.getCurrentTime();
     if (currentTime === undefined) return;
 
@@ -199,7 +207,7 @@
     updateRowHighlights();
     if (player && typeof player.seekTo === 'function') {
       player.seekTo(tracks[index].startSec, true);
-      player.playVideo();
+      player.playVideo(); // ユーザー操作（クリック）で明示的に再生を開始
     }
   }
 
@@ -225,6 +233,7 @@
         row.classList.remove('active');
       }
 
+      // 要改善点4: 再生回数0の曲の行をグレーアウト
       if (t.currentCount === 0) {
         row.classList.add('disabled');
       } else {
@@ -262,13 +271,14 @@
     btn.textContent = `自動制御: ${isAutoControlEnabled ? 'ON' : 'OFF'}`;
   }
 
+  // 要改善点2: 確認メッセージを出さず即座に停止
   function emergencyStop() {
     if (timer) clearInterval(timer);
     isAutoControlEnabled = false;
     if (player && typeof player.pauseVideo === 'function') {
       player.pauseVideo();
     }
-    document.getElementById('yts-btn-toggle').textContent = '自動制御: OFF';
-    alert('自動制御を停止しました。');
+    const btn = document.getElementById('yts-btn-toggle');
+    if (btn) btn.textContent = '自動制御: OFF';
   }
 })();

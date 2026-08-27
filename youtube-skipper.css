@@ -5,17 +5,6 @@
   font-family: sans-serif;
 }
 
-.yts-title {
-  font-size: 1.4rem;
-  margin-bottom: 4px;
-}
-
-.yts-memo {
-  font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 12px;
-}
-
 /* プレイヤー枠（レスポンシブ 16:9） */
 .yts-player-wrapper {
   margin-bottom: 12px;
@@ -79,11 +68,13 @@
   background-color: #f5f5f5;
 }
 
+/* 要改善点5: タイムスタンプ表示を指マーク（pointer）に強制 */
 .yts-time-link {
   color: #0066cc;
-  cursor: pointer;
+  cursor: pointer !important;
   text-decoration: underline;
   font-family: monospace;
+  display: inline-block;
 }
 
 .yts-select {
@@ -101,8 +92,9 @@
   font-weight: bold;
 }
 
-/* 0回（スキップ）のグレーアウト */
+/* 要改善点4: 再生回数0の行のグレーアウト（文字色・背景色・透明度） */
 .yts-track-row.disabled {
   opacity: 0.4;
-  background-color: #f0f0f0;
+  background-color: #f0f0f0 !important;
+  color: #888;
 }
