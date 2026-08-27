@@ -5,7 +5,6 @@
   let firstScriptTag = document.getElementsByTagName('script')[0];
   firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-  // 複数プレイヤー管理用
   let instances = [];
 
   // 時間表記 ("0:00") を 秒数 に変換
@@ -42,7 +41,6 @@
 
       instances.push(instance);
 
-      // トラックデータ初期化
       instance.tracks = masterData.tracks.map((t, index) => ({
         ...t,
         index: index,
@@ -54,11 +52,11 @@
         instance.tracks[i].endSec = (i < instance.tracks.length - 1) ? instance.tracks[i + 1].startSec : Infinity;
       }
 
-      // DOM構築
       const appContainer = document.createElement('div');
       appContainer.className = 'yts-app';
       appContainer.id = `yts-app-${appIndex}`;
       
+      // ② 「曲名」→「トラック名」、⑤ 「n周目」ヘッダーの追加
       appContainer.innerHTML = `
         <div class="yts-player-wrapper">
           <div class="yts-embed-responsive">
@@ -74,8 +72,9 @@
           <thead>
             <tr>
               <th style="width: 15%;">時間</th>
-              <th style="width: 25%;">再生回数</th>
-              <th>曲名</th>
+              <th style="width: 20%;">再生回数</th>
+              <th style="width: 15%;">n周目</th>
+              <th>トラック名</th>
             </tr>
           </thead>
           <tbody id="yts-track-list-${appIndex}"></tbody>
@@ -102,7 +101,12 @@
       if (track.currentCount === 0) tr.classList.add('disabled');
 
       const tdTime = document.createElement('td');
-      tdTime.innerHTML = `<span class="yts-time-link" data-index="${track.index}">${track.time}</span>`;
+      // ③ 再生回数0の場合はリンク化せず通常の文字列にする
+      if (track.currentCount === 0) {
+        tdTime.innerHTML = `<span class="yts-time-text">${track.time}</span>`;
+      } else {
+        tdTime.innerHTML = `<span class="yts-time-link" data-index="${track.index}">${track.time}</span>`;
+      }
 
       const tdCount = document.createElement('td');
       const select = document.createElement('select');
@@ -117,11 +121,18 @@
       select.addEventListener('change', (e) => updateRepeatCount(inst, track.index, parseInt(e.target.value)));
       tdCount.appendChild(select);
 
+      // ⑤ n周目の表示セル
+      const tdLoop = document.createElement('td');
+      tdLoop.id = `yts-track-loop-${inst.appIndex}-${track.index}`;
+      tdLoop.className = 'yts-loop-cell';
+      tdLoop.textContent = '-';
+
       const tdTitle = document.createElement('td');
       tdTitle.textContent = track.title;
 
       tr.appendChild(tdTime);
       tr.appendChild(tdCount);
+      tr.appendChild(tdLoop);
       tr.appendChild(tdTitle);
       tbody.appendChild(tr);
     });
@@ -132,6 +143,8 @@
         jumpToTrack(inst, idx);
       });
     });
+
+    updateRowHighlights(inst);
   }
 
   function bindEvents(inst) {
@@ -140,7 +153,6 @@
     document.getElementById(`yts-btn-stop-${inst.appIndex}`).addEventListener('click', () => emergencyStop(inst));
   }
 
-  // YouTube Iframe API 準備完了時
   window.onYouTubeIframeAPIReady = function() {
     instances.forEach((inst) => {
       inst.player = new YT.Player(`yts-yt-player-${inst.appIndex}`, {
@@ -188,15 +200,29 @@
         return;
       }
 
+      // 最後の有効なトラックか判定
+      const isLastValidTrack = !hasNextValidTrack(inst, inst.currentTrackIndex + 1);
+
       if (currentTime >= currentTrack.endSec - 0.3) {
         if (inst.currentLoop < currentTrack.currentCount) {
           inst.currentLoop++;
           inst.player.seekTo(currentTrack.startSec, true);
+          updateRowHighlights(inst);
         } else {
-          skipToNextValidTrack(inst, inst.currentTrackIndex + 1);
+          // ① 最終トラックの最終周であればプログラムで制御せず動画をそのまま終わらせる
+          if (!isLastValidTrack) {
+            skipToNextValidTrack(inst, inst.currentTrackIndex + 1);
+          }
         }
       }
     }
+  }
+
+  function hasNextValidTrack(inst, startIndex) {
+    for (let i = startIndex; i < inst.tracks.length; i++) {
+      if (inst.tracks[i].currentCount > 0) return true;
+    }
+    return false;
   }
 
   function skipToNextValidTrack(inst, startIndex) {
@@ -206,11 +232,11 @@
         return;
       }
     }
-    inst.player.pauseVideo();
   }
 
   function jumpToTrack(inst, index) {
     if (index < 0 || index >= inst.tracks.length) return;
+    if (inst.tracks[index].currentCount === 0) return; // 回数0はジャンプ不可
     
     inst.currentTrackIndex = index;
     inst.currentLoop = 1;
@@ -235,12 +261,19 @@
   function updateRowHighlights(inst) {
     inst.tracks.forEach((t) => {
       const row = document.getElementById(`yts-track-row-${inst.appIndex}-${t.index}`);
+      const loopCell = document.getElementById(`yts-track-loop-${inst.appIndex}-${t.index}`);
       if (!row) return;
 
       if (t.index === inst.currentTrackIndex) {
         row.classList.add('active');
+        if (loopCell) {
+          loopCell.textContent = t.currentCount > 0 ? `${inst.currentLoop}/${t.currentCount}` : '-';
+        }
       } else {
         row.classList.remove('active');
+        if (loopCell) {
+          loopCell.textContent = '-';
+        }
       }
 
       if (t.currentCount === 0) {
@@ -253,7 +286,7 @@
 
   function updateRepeatCount(inst, index, newCount) {
     inst.tracks[index].currentCount = newCount;
-    updateRowHighlights(inst);
+    renderTable(inst); // DOM再描画でタイムスタンプのリンク状態も切り替え
     if (index === inst.currentTrackIndex && newCount === 0) {
       skipToNextValidTrack(inst, index + 1);
     }
@@ -262,7 +295,6 @@
   function resetToPreset(inst) {
     inst.tracks.forEach((t, i) => { t.currentCount = inst.masterData.tracks[i].repeatCount; });
     renderTable(inst);
-    updateRowHighlights(inst);
     if (inst.currentTrackIndex !== -1 && inst.tracks[inst.currentTrackIndex].currentCount === 0) {
       skipToNextValidTrack(inst, inst.currentTrackIndex);
     }
@@ -271,7 +303,6 @@
   function setAllTo(inst, count) {
     inst.tracks.forEach(t => t.currentCount = count);
     renderTable(inst);
-    updateRowHighlights(inst);
   }
 
   function emergencyStop(inst) {

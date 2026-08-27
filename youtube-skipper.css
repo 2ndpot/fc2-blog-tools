@@ -73,8 +73,18 @@
   display: inline-block;
 }
 
+.yts-time-text {
+  color: inherit;
+  font-family: monospace;
+  display: inline-block;
+}
+
 .yts-select {
   padding: 2px 4px;
+}
+
+.yts-loop-cell {
+  font-family: monospace;
 }
 
 /* 状態演出 */
@@ -82,15 +92,14 @@
   transition: background-color 0.2s, opacity 0.2s;
 }
 
-/* 再生中の強調 */
+/* 再生中の強調（boldなし） */
 .yts-track-row.active {
   background-color: #e3f2fd;
   color: cadetblue;
 }
 
-/* 再生回数0の行のグレーアウト（文字色・背景色・透明度） */
+/* ④ 再生回数0の行のグレーアウト（background-color指定を削除） */
 .yts-track-row.disabled {
   opacity: 0.4;
-  background-color: #f0f0f0;
   color: #888;
 }
