@@ -98,8 +98,35 @@
   color: cadetblue;
 }
 
-/* ④ 再生回数0の行のグレーアウト（background-color指定を削除） */
+/* 再生回数0の行のグレーアウト（background-color指定を削除） */
 .yts-track-row.disabled {
   opacity: 0.4;
   color: #888;
+}
+
+/* プレイリストナビゲーションバー */
+.yts-playlist-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  background: #f8f9fa;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.yts-select-video {
+  flex-grow: 1;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.yts-btn-sm {
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }

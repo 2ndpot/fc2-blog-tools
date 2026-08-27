@@ -1,5 +1,4 @@
 (function() {
-  // 1. YouTube Iframe API の自動読み込み
   let tag = document.createElement('script');
   tag.src = "https://www.youtube.com/iframe_api";
   let firstScriptTag = document.getElementsByTagName('script')[0];
@@ -7,7 +6,6 @@
 
   let instances = [];
 
-  // 時間表記 ("0:00") を 秒数 に変換
   function parseTimeToSeconds(timeStr) {
     const parts = timeStr.split(':').map(Number);
     if (parts.length === 2) return parts[0] * 60 + parts[1];
@@ -15,49 +13,70 @@
     return 0;
   }
 
-  // DOM生成 & 初期化
   document.addEventListener("DOMContentLoaded", function() {
     const jsonScripts = document.querySelectorAll('script.yts-config');
     if (jsonScripts.length === 0) return;
 
     jsonScripts.forEach((jsonScript, appIndex) => {
-      let masterData = null;
+      let rawData = null;
       try {
-        masterData = JSON.parse(jsonScript.textContent);
+        rawData = JSON.parse(jsonScript.textContent);
       } catch (e) {
         console.error(`yts[${appIndex}]: JSONの読み込みに失敗しました:`, e);
         return;
       }
 
+      // 単一動画データも複数動画（playlist）構造に統一化
+      let playlist = [];
+      if (rawData.videos && Array.isArray(rawData.videos)) {
+        playlist = rawData.videos;
+      } else {
+        playlist = [{
+          videoId: rawData.videoId,
+          title: rawData.artist || rawData.title || "動画 1",
+          tracks: rawData.tracks
+        }];
+      }
+
+      // トラックデータの初期化（秒数計算など）
+      playlist.forEach(vid => {
+        vid.parsedTracks = vid.tracks.map((t, index) => ({
+          ...t,
+          index: index,
+          startSec: parseTimeToSeconds(t.time),
+          currentCount: t.repeatCount
+        }));
+        for (let i = 0; i < vid.parsedTracks.length; i++) {
+          vid.parsedTracks[i].endSec = (i < vid.parsedTracks.length - 1) ? vid.parsedTracks[i + 1].startSec : Infinity;
+        }
+      });
+
       const instance = {
         appIndex: appIndex,
-        masterData: masterData,
+        playlist: playlist,
+        currentVideoIndex: 0,
         player: null,
         timer: null,
         currentTrackIndex: -1,
-        currentLoop: 1,
-        tracks: []
+        currentLoop: 1
       };
 
       instances.push(instance);
-
-      instance.tracks = masterData.tracks.map((t, index) => ({
-        ...t,
-        index: index,
-        startSec: parseTimeToSeconds(t.time),
-        currentCount: t.repeatCount
-      }));
-
-      for (let i = 0; i < instance.tracks.length; i++) {
-        instance.tracks[i].endSec = (i < instance.tracks.length - 1) ? instance.tracks[i + 1].startSec : Infinity;
-      }
 
       const appContainer = document.createElement('div');
       appContainer.className = 'yts-app';
       appContainer.id = `yts-app-${appIndex}`;
       
-      // ② 「曲名」→「トラック名」、⑤ 「n周目」ヘッダーの追加
+      const isMulti = playlist.length > 1;
+
       appContainer.innerHTML = `
+        ${isMulti ? `
+        <div class="yts-playlist-nav">
+          <button class="yts-btn yts-btn-sm" id="yts-prev-vid-${appIndex}">◀ 前の動画</button>
+          <select class="yts-select-video" id="yts-select-vid-${appIndex}"></select>
+          <button class="yts-btn yts-btn-sm" id="yts-next-vid-${appIndex}">次の動画 ▶</button>
+        </div>
+        ` : ''}
         <div class="yts-player-wrapper">
           <div class="yts-embed-responsive">
             <div id="yts-yt-player-${appIndex}"></div>
@@ -83,17 +102,74 @@
 
       jsonScript.parentNode.insertBefore(appContainer, jsonScript.nextSibling);
 
+      if (isMulti) {
+        setupPlaylistUI(instance);
+      }
+
       renderTable(instance);
       bindEvents(instance);
     });
   });
+
+  function setupPlaylistUI(inst) {
+    const select = document.getElementById(`yts-select-vid-${inst.appIndex}`);
+    if (!select) return;
+    select.innerHTML = '';
+    inst.playlist.forEach((v, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = `${idx + 1}. ${v.title || '動画 ' + (idx + 1)}`;
+      select.appendChild(opt);
+    });
+
+    select.addEventListener('change', (e) => {
+      switchVideo(inst, parseInt(e.target.value));
+    });
+
+    document.getElementById(`yts-prev-vid-${inst.appIndex}`).addEventListener('click', () => {
+      if (inst.currentVideoIndex > 0) switchVideo(inst, inst.currentVideoIndex - 1);
+    });
+    document.getElementById(`yts-next-vid-${inst.appIndex}`).addEventListener('click', () => {
+      if (inst.currentVideoIndex < inst.playlist.length - 1) switchVideo(inst, inst.currentVideoIndex + 1);
+    });
+  }
+
+  function switchVideo(inst, newVideoIdx, autoPlay = true) {
+    if (newVideoIdx < 0 || newVideoIdx >= inst.playlist.length) return;
+    inst.currentVideoIndex = newVideoIdx;
+    inst.currentTrackIndex = -1;
+    inst.currentLoop = 1;
+
+    const select = document.getElementById(`yts-select-vid-${inst.appIndex}`);
+    if (select) select.value = newVideoIdx;
+
+    renderTable(inst);
+
+    const currentVid = inst.playlist[inst.currentVideoIndex];
+    if (inst.player && typeof inst.player.loadVideoById === 'function') {
+      const firstValidTrack = currentVid.parsedTracks.find(t => t.currentCount > 0);
+      const startSec = firstValidTrack ? firstValidTrack.startSec : 0;
+      
+      if (autoPlay) {
+        inst.player.loadVideoById(currentVid.videoId, startSec);
+      } else {
+        inst.player.cueVideoById(currentVid.videoId, startSec);
+      }
+    }
+  }
+
+  function getCurrentTracks(inst) {
+    return inst.playlist[inst.currentVideoIndex].parsedTracks;
+  }
 
   function renderTable(inst) {
     const tbody = document.getElementById(`yts-track-list-${inst.appIndex}`);
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    inst.tracks.forEach((track) => {
+    const tracks = getCurrentTracks(inst);
+
+    tracks.forEach((track) => {
       const tr = document.createElement('tr');
       tr.id = `yts-track-row-${inst.appIndex}-${track.index}`;
       tr.className = 'yts-track-row';
@@ -101,7 +177,6 @@
       if (track.currentCount === 0) tr.classList.add('disabled');
 
       const tdTime = document.createElement('td');
-      // ③ 再生回数0の場合はリンク化せず通常の文字列にする
       if (track.currentCount === 0) {
         tdTime.innerHTML = `<span class="yts-time-text">${track.time}</span>`;
       } else {
@@ -121,7 +196,6 @@
       select.addEventListener('change', (e) => updateRepeatCount(inst, track.index, parseInt(e.target.value)));
       tdCount.appendChild(select);
 
-      // ⑤ n周目の表示セル
       const tdLoop = document.createElement('td');
       tdLoop.id = `yts-track-loop-${inst.appIndex}-${track.index}`;
       tdLoop.className = 'yts-loop-cell';
@@ -155,18 +229,20 @@
 
   window.onYouTubeIframeAPIReady = function() {
     instances.forEach((inst) => {
+      const currentVid = inst.playlist[inst.currentVideoIndex];
       inst.player = new YT.Player(`yts-yt-player-${inst.appIndex}`, {
-        videoId: inst.masterData.videoId,
+        videoId: currentVid.videoId,
         events: {
           'onReady': () => { 
             if (!inst.timer) inst.timer = setInterval(() => checkTimeLoop(inst), 100); 
           },
           'onStateChange': (e) => {
             if (e.data === YT.PlayerState.PLAYING) {
+              const tracks = getCurrentTracks(inst);
               if (inst.player && typeof inst.player.getDuration === 'function') {
                 const duration = inst.player.getDuration();
-                if (duration > 0 && inst.tracks.length > 0) {
-                  inst.tracks[inst.tracks.length - 1].endSec = duration;
+                if (duration > 0 && tracks.length > 0) {
+                  tracks[tracks.length - 1].endSec = duration;
                 }
               }
               syncCurrentTrackIndex(inst);
@@ -184,7 +260,8 @@
     const currentTime = inst.player.getCurrentTime();
     if (currentTime === undefined) return;
 
-    const trackIdx = inst.tracks.findIndex(t => currentTime >= t.startSec && currentTime < t.endSec);
+    const tracks = getCurrentTracks(inst);
+    const trackIdx = tracks.findIndex(t => currentTime >= t.startSec && currentTime < t.endSec);
 
     if (trackIdx !== -1) {
       if (trackIdx !== inst.currentTrackIndex) {
@@ -193,14 +270,13 @@
         updateRowHighlights(inst);
       }
 
-      const currentTrack = inst.tracks[inst.currentTrackIndex];
+      const currentTrack = tracks[inst.currentTrackIndex];
 
       if (currentTrack.currentCount === 0) {
         skipToNextValidTrack(inst, inst.currentTrackIndex);
         return;
       }
 
-      // 最後の有効なトラックか判定
       const isLastValidTrack = !hasNextValidTrack(inst, inst.currentTrackIndex + 1);
 
       if (currentTime >= currentTrack.endSec - 0.3) {
@@ -209,9 +285,13 @@
           inst.player.seekTo(currentTrack.startSec, true);
           updateRowHighlights(inst);
         } else {
-          // ① 最終トラックの最終周であればプログラムで制御せず動画をそのまま終わらせる
           if (!isLastValidTrack) {
             skipToNextValidTrack(inst, inst.currentTrackIndex + 1);
+          } else {
+            // プレイリストの次の動画へ自動リレー
+            if (inst.currentVideoIndex < inst.playlist.length - 1) {
+              switchVideo(inst, inst.currentVideoIndex + 1, true);
+            }
           }
         }
       }
@@ -219,15 +299,17 @@
   }
 
   function hasNextValidTrack(inst, startIndex) {
-    for (let i = startIndex; i < inst.tracks.length; i++) {
-      if (inst.tracks[i].currentCount > 0) return true;
+    const tracks = getCurrentTracks(inst);
+    for (let i = startIndex; i < tracks.length; i++) {
+      if (tracks[i].currentCount > 0) return true;
     }
     return false;
   }
 
   function skipToNextValidTrack(inst, startIndex) {
-    for (let i = startIndex; i < inst.tracks.length; i++) {
-      if (inst.tracks[i].currentCount > 0) {
+    const tracks = getCurrentTracks(inst);
+    for (let i = startIndex; i < tracks.length; i++) {
+      if (tracks[i].currentCount > 0) {
         jumpToTrack(inst, i);
         return;
       }
@@ -235,14 +317,15 @@
   }
 
   function jumpToTrack(inst, index) {
-    if (index < 0 || index >= inst.tracks.length) return;
-    if (inst.tracks[index].currentCount === 0) return; // 回数0はジャンプ不可
+    const tracks = getCurrentTracks(inst);
+    if (index < 0 || index >= tracks.length) return;
+    if (tracks[index].currentCount === 0) return;
     
     inst.currentTrackIndex = index;
     inst.currentLoop = 1;
     updateRowHighlights(inst);
     if (inst.player && typeof inst.player.seekTo === 'function') {
-      inst.player.seekTo(inst.tracks[index].startSec, true);
+      inst.player.seekTo(tracks[index].startSec, true);
       inst.player.playVideo();
     }
   }
@@ -250,7 +333,8 @@
   function syncCurrentTrackIndex(inst) {
     if (!inst.player || typeof inst.player.getCurrentTime !== 'function') return;
     const currentTime = inst.player.getCurrentTime();
-    const idx = inst.tracks.findIndex(t => currentTime >= t.startSec && currentTime < t.endSec);
+    const tracks = getCurrentTracks(inst);
+    const idx = tracks.findIndex(t => currentTime >= t.startSec && currentTime < t.endSec);
     if (idx !== -1 && idx !== inst.currentTrackIndex) {
       inst.currentTrackIndex = idx;
       inst.currentLoop = 1;
@@ -259,7 +343,8 @@
   }
 
   function updateRowHighlights(inst) {
-    inst.tracks.forEach((t) => {
+    const tracks = getCurrentTracks(inst);
+    tracks.forEach((t) => {
       const row = document.getElementById(`yts-track-row-${inst.appIndex}-${t.index}`);
       const loopCell = document.getElementById(`yts-track-loop-${inst.appIndex}-${t.index}`);
       if (!row) return;
@@ -285,23 +370,28 @@
   }
 
   function updateRepeatCount(inst, index, newCount) {
-    inst.tracks[index].currentCount = newCount;
-    renderTable(inst); // DOM再描画でタイムスタンプのリンク状態も切り替え
+    const tracks = getCurrentTracks(inst);
+    tracks[index].currentCount = newCount;
+    renderTable(inst);
     if (index === inst.currentTrackIndex && newCount === 0) {
       skipToNextValidTrack(inst, index + 1);
     }
   }
 
   function resetToPreset(inst) {
-    inst.tracks.forEach((t, i) => { t.currentCount = inst.masterData.tracks[i].repeatCount; });
+    const currentVid = inst.playlist[inst.currentVideoIndex];
+    currentVid.parsedTracks.forEach((t, i) => { 
+      t.currentCount = currentVid.tracks[i].repeatCount; 
+    });
     renderTable(inst);
-    if (inst.currentTrackIndex !== -1 && inst.tracks[inst.currentTrackIndex].currentCount === 0) {
+    if (inst.currentTrackIndex !== -1 && currentVid.parsedTracks[inst.currentTrackIndex].currentCount === 0) {
       skipToNextValidTrack(inst, inst.currentTrackIndex);
     }
   }
 
   function setAllTo(inst, count) {
-    inst.tracks.forEach(t => t.currentCount = count);
+    const tracks = getCurrentTracks(inst);
+    tracks.forEach(t => t.currentCount = count);
     renderTable(inst);
   }
 
