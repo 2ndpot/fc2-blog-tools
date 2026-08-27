@@ -86,7 +86,7 @@
           <button class="yts-btn" id="yts-btn-all1-${appIndex}">全曲1回</button>
           <button class="yts-btn yts-btn-danger" id="yts-btn-stop-${appIndex}">停止</button>
           <select class="yts-select yts-filter-select" id="yts-select-filter-${appIndex}">
-            <option value="none">🎬 現代 (カラー)</option>
+            <option value="none">🎬 総天然色</option>
             <option value="bw">📷 昭和モノクロ</option>
             <option value="sepia">📜 昭和セピア</option>
             <option value="film">🎞️ 8mmフィルム</option>
