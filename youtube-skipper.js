@@ -5,12 +5,8 @@
   let firstScriptTag = document.getElementsByTagName('script')[0];
   firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-  let player = null;
-  let timer = null;
-  let currentTrackIndex = -1;
-  let currentLoop = 1;
-  let tracks = [];
-  let masterData = null;
+  // 複数プレイヤー管理用
+  let instances = [];
 
   // 時間表記 ("0:00") を 秒数 に変換
   function parseTimeToSeconds(timeStr) {
@@ -22,71 +18,85 @@
 
   // DOM生成 & 初期化
   document.addEventListener("DOMContentLoaded", function() {
-    const jsonScript = document.querySelector('script.yts-config');
-    if (!jsonScript) return;
+    const jsonScripts = document.querySelectorAll('script.yts-config');
+    if (jsonScripts.length === 0) return;
 
-    try {
-      masterData = JSON.parse(jsonScript.textContent);
-    } catch (e) {
-      console.error("yts: JSONの読み込みに失敗しました:", e);
-      return;
-    }
+    jsonScripts.forEach((jsonScript, appIndex) => {
+      let masterData = null;
+      try {
+        masterData = JSON.parse(jsonScript.textContent);
+      } catch (e) {
+        console.error(`yts[${appIndex}]: JSONの読み込みに失敗しました:`, e);
+        return;
+      }
 
-    const appContainer = document.createElement('div');
-    appContainer.className = 'yts-app';
-    
-    // 操作卓（「自動制御」ボタンを削除してスッキリ化）
-    appContainer.innerHTML = `
-      <div class="yts-player-wrapper">
-        <div class="yts-embed-responsive">
-          <div id="yts-yt-player"></div>
+      const instance = {
+        appIndex: appIndex,
+        masterData: masterData,
+        player: null,
+        timer: null,
+        currentTrackIndex: -1,
+        currentLoop: 1,
+        tracks: []
+      };
+
+      instances.push(instance);
+
+      // トラックデータ初期化
+      instance.tracks = masterData.tracks.map((t, index) => ({
+        ...t,
+        index: index,
+        startSec: parseTimeToSeconds(t.time),
+        currentCount: t.repeatCount
+      }));
+
+      for (let i = 0; i < instance.tracks.length; i++) {
+        instance.tracks[i].endSec = (i < instance.tracks.length - 1) ? instance.tracks[i + 1].startSec : Infinity;
+      }
+
+      // DOM構築
+      const appContainer = document.createElement('div');
+      appContainer.className = 'yts-app';
+      appContainer.id = `yts-app-${appIndex}`;
+      
+      appContainer.innerHTML = `
+        <div class="yts-player-wrapper">
+          <div class="yts-embed-responsive">
+            <div id="yts-yt-player-${appIndex}"></div>
+          </div>
         </div>
-      </div>
-      <div class="yts-controls">
-        <button class="yts-btn yts-btn-primary" id="yts-btn-preset">プリセット</button>
-        <button class="yts-btn" id="yts-btn-all1">全曲1回</button>
-        <button class="yts-btn yts-btn-danger" id="yts-btn-stop">停止</button>
-      </div>
-      <table class="yts-table">
-        <thead>
-          <tr>
-            <th style="width: 15%;">時間</th>
-            <th style="width: 25%;">再生回数</th>
-            <th>曲名</th>
-          </tr>
-        </thead>
-        <tbody id="yts-track-list"></tbody>
-      </table>
-    `;
+        <div class="yts-controls">
+          <button class="yts-btn yts-btn-primary" id="yts-btn-preset-${appIndex}">プリセット</button>
+          <button class="yts-btn" id="yts-btn-all1-${appIndex}">全曲1回</button>
+          <button class="yts-btn yts-btn-danger" id="yts-btn-stop-${appIndex}">停止</button>
+        </div>
+        <table class="yts-table">
+          <thead>
+            <tr>
+              <th style="width: 15%;">時間</th>
+              <th style="width: 25%;">再生回数</th>
+              <th>曲名</th>
+            </tr>
+          </thead>
+          <tbody id="yts-track-list-${appIndex}"></tbody>
+        </table>
+      `;
 
-    jsonScript.parentNode.insertBefore(appContainer, jsonScript.nextSibling);
+      jsonScript.parentNode.insertBefore(appContainer, jsonScript.nextSibling);
 
-    initTracks();
-    renderTable();
-    bindEvents();
+      renderTable(instance);
+      bindEvents(instance);
+    });
   });
 
-  function initTracks() {
-    tracks = masterData.tracks.map((t, index) => ({
-      ...t,
-      index: index,
-      startSec: parseTimeToSeconds(t.time),
-      currentCount: t.repeatCount
-    }));
-
-    for (let i = 0; i < tracks.length; i++) {
-      tracks[i].endSec = (i < tracks.length - 1) ? tracks[i + 1].startSec : Infinity;
-    }
-  }
-
-  function renderTable() {
-    const tbody = document.getElementById('yts-track-list');
+  function renderTable(inst) {
+    const tbody = document.getElementById(`yts-track-list-${inst.appIndex}`);
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    tracks.forEach((track) => {
+    inst.tracks.forEach((track) => {
       const tr = document.createElement('tr');
-      tr.id = `yts-track-row-${track.index}`;
+      tr.id = `yts-track-row-${inst.appIndex}-${track.index}`;
       tr.className = 'yts-track-row';
       
       if (track.currentCount === 0) tr.classList.add('disabled');
@@ -104,7 +114,7 @@
         if (i === track.currentCount) opt.selected = true;
         select.appendChild(opt);
       }
-      select.addEventListener('change', (e) => updateRepeatCount(track.index, parseInt(e.target.value)));
+      select.addEventListener('change', (e) => updateRepeatCount(inst, track.index, parseInt(e.target.value)));
       tdCount.appendChild(select);
 
       const tdTitle = document.createElement('td');
@@ -119,115 +129,115 @@
     tbody.querySelectorAll('.yts-time-link').forEach(el => {
       el.addEventListener('click', (e) => {
         const idx = parseInt(e.target.getAttribute('data-index'));
-        jumpToTrack(idx);
+        jumpToTrack(inst, idx);
       });
     });
   }
 
-  function bindEvents() {
-    document.getElementById('yts-btn-preset').addEventListener('click', resetToPreset);
-    document.getElementById('yts-btn-all1').addEventListener('click', () => setAllTo(1));
-    document.getElementById('yts-btn-stop').addEventListener('click', emergencyStop);
+  function bindEvents(inst) {
+    document.getElementById(`yts-btn-preset-${inst.appIndex}`).addEventListener('click', () => resetToPreset(inst));
+    document.getElementById(`yts-btn-all1-${inst.appIndex}`).addEventListener('click', () => setAllTo(inst, 1));
+    document.getElementById(`yts-btn-stop-${inst.appIndex}`).addEventListener('click', () => emergencyStop(inst));
   }
 
+  // YouTube Iframe API 準備完了時
   window.onYouTubeIframeAPIReady = function() {
-    if (!masterData) return;
-    player = new YT.Player('yts-yt-player', {
-      videoId: masterData.videoId,
-      events: {
-        'onReady': () => { 
-          if (!timer) timer = setInterval(checkTimeLoop, 100); 
-        },
-        'onStateChange': (e) => {
-          if (e.data === YT.PlayerState.PLAYING) {
-            if (player && typeof player.getDuration === 'function') {
-              const duration = player.getDuration();
-              if (duration > 0 && tracks.length > 0) {
-                tracks[tracks.length - 1].endSec = duration;
+    instances.forEach((inst) => {
+      inst.player = new YT.Player(`yts-yt-player-${inst.appIndex}`, {
+        videoId: inst.masterData.videoId,
+        events: {
+          'onReady': () => { 
+            if (!inst.timer) inst.timer = setInterval(() => checkTimeLoop(inst), 100); 
+          },
+          'onStateChange': (e) => {
+            if (e.data === YT.PlayerState.PLAYING) {
+              if (inst.player && typeof inst.player.getDuration === 'function') {
+                const duration = inst.player.getDuration();
+                if (duration > 0 && inst.tracks.length > 0) {
+                  inst.tracks[inst.tracks.length - 1].endSec = duration;
+                }
               }
+              syncCurrentTrackIndex(inst);
             }
-            syncCurrentTrackIndex();
           }
         }
-      }
+      });
     });
   };
 
-  function checkTimeLoop() {
-    if (!player || typeof player.getCurrentTime !== 'function') return;
-    
-    // 再生中のみループ制御
-    if (player.getPlayerState && player.getPlayerState() !== YT.PlayerState.PLAYING) return;
+  function checkTimeLoop(inst) {
+    if (!inst.player || typeof inst.player.getCurrentTime !== 'function') return;
+    if (inst.player.getPlayerState && inst.player.getPlayerState() !== YT.PlayerState.PLAYING) return;
 
-    const currentTime = player.getCurrentTime();
+    const currentTime = inst.player.getCurrentTime();
     if (currentTime === undefined) return;
 
-    const trackIdx = tracks.findIndex(t => currentTime >= t.startSec && currentTime < t.endSec);
+    const trackIdx = inst.tracks.findIndex(t => currentTime >= t.startSec && currentTime < t.endSec);
 
     if (trackIdx !== -1) {
-      if (trackIdx !== currentTrackIndex) {
-        currentTrackIndex = trackIdx;
-        currentLoop = 1;
-        updateRowHighlights();
+      if (trackIdx !== inst.currentTrackIndex) {
+        inst.currentTrackIndex = trackIdx;
+        inst.currentLoop = 1;
+        updateRowHighlights(inst);
       }
 
-      const currentTrack = tracks[currentTrackIndex];
+      const currentTrack = inst.tracks[inst.currentTrackIndex];
 
       if (currentTrack.currentCount === 0) {
-        skipToNextValidTrack(currentTrackIndex);
+        skipToNextValidTrack(inst, inst.currentTrackIndex);
         return;
       }
 
       if (currentTime >= currentTrack.endSec - 0.3) {
-        if (currentLoop < currentTrack.currentCount) {
-          currentLoop++;
-          player.seekTo(currentTrack.startSec, true);
+        if (inst.currentLoop < currentTrack.currentCount) {
+          inst.currentLoop++;
+          inst.player.seekTo(currentTrack.startSec, true);
         } else {
-          skipToNextValidTrack(currentTrackIndex + 1);
+          skipToNextValidTrack(inst, inst.currentTrackIndex + 1);
         }
       }
     }
   }
 
-  function skipToNextValidTrack(startIndex) {
-    for (let i = startIndex; i < tracks.length; i++) {
-      if (tracks[i].currentCount > 0) {
-        jumpToTrack(i);
+  function skipToNextValidTrack(inst, startIndex) {
+    for (let i = startIndex; i < inst.tracks.length; i++) {
+      if (inst.tracks[i].currentCount > 0) {
+        jumpToTrack(inst, i);
         return;
       }
     }
-    player.pauseVideo();
+    inst.player.pauseVideo();
   }
 
-  function jumpToTrack(index) {
-    if (index < 0 || index >= tracks.length) return;
+  function jumpToTrack(inst, index) {
+    if (index < 0 || index >= inst.tracks.length) return;
     
-    currentTrackIndex = index;
-    currentLoop = 1;
-    updateRowHighlights();
-    if (player && typeof player.seekTo === 'function') {
-      player.seekTo(tracks[index].startSec, true);
-      player.playVideo();
+    inst.currentTrackIndex = index;
+    inst.currentLoop = 1;
+    updateRowHighlights(inst);
+    if (inst.player && typeof inst.player.seekTo === 'function') {
+      inst.player.seekTo(inst.tracks[index].startSec, true);
+      inst.player.playVideo();
     }
   }
 
-  function syncCurrentTrackIndex() {
-    if (!player || typeof player.getCurrentTime !== 'function') return;
-    const currentTime = player.getCurrentTime();
-    const idx = tracks.findIndex(t => currentTime >= t.startSec && currentTime < t.endSec);
-    if (idx !== -1 && idx !== currentTrackIndex) {
-      currentTrackIndex = idx;
-      currentLoop = 1;
-      updateRowHighlights();
+  function syncCurrentTrackIndex(inst) {
+    if (!inst.player || typeof inst.player.getCurrentTime !== 'function') return;
+    const currentTime = inst.player.getCurrentTime();
+    const idx = inst.tracks.findIndex(t => currentTime >= t.startSec && currentTime < t.endSec);
+    if (idx !== -1 && idx !== inst.currentTrackIndex) {
+      inst.currentTrackIndex = idx;
+      inst.currentLoop = 1;
+      updateRowHighlights(inst);
     }
   }
 
-  function updateRowHighlights() {
-    tracks.forEach((t) => {
-      const row = document.getElementById(`yts-track-row-${t.index}`);
+  function updateRowHighlights(inst) {
+    inst.tracks.forEach((t) => {
+      const row = document.getElementById(`yts-track-row-${inst.appIndex}-${t.index}`);
       if (!row) return;
 
-      if (t.index === currentTrackIndex) {
+      if (t.index === inst.currentTrackIndex) {
         row.classList.add('active');
       } else {
         row.classList.remove('active');
@@ -241,33 +251,32 @@
     });
   }
 
-  function updateRepeatCount(index, newCount) {
-    tracks[index].currentCount = newCount;
-    updateRowHighlights();
-    if (index === currentTrackIndex && newCount === 0) {
-      skipToNextValidTrack(index + 1);
+  function updateRepeatCount(inst, index, newCount) {
+    inst.tracks[index].currentCount = newCount;
+    updateRowHighlights(inst);
+    if (index === inst.currentTrackIndex && newCount === 0) {
+      skipToNextValidTrack(inst, index + 1);
     }
   }
 
-  function resetToPreset() {
-    tracks.forEach((t, i) => { t.currentCount = masterData.tracks[i].repeatCount; });
-    renderTable();
-    updateRowHighlights();
-    if (currentTrackIndex !== -1 && tracks[currentTrackIndex].currentCount === 0) {
-      skipToNextValidTrack(currentTrackIndex);
+  function resetToPreset(inst) {
+    inst.tracks.forEach((t, i) => { t.currentCount = inst.masterData.tracks[i].repeatCount; });
+    renderTable(inst);
+    updateRowHighlights(inst);
+    if (inst.currentTrackIndex !== -1 && inst.tracks[inst.currentTrackIndex].currentCount === 0) {
+      skipToNextValidTrack(inst, inst.currentTrackIndex);
     }
   }
 
-  function setAllTo(count) {
-    tracks.forEach(t => t.currentCount = count);
-    renderTable();
-    updateRowHighlights();
+  function setAllTo(inst, count) {
+    inst.tracks.forEach(t => t.currentCount = count);
+    renderTable(inst);
+    updateRowHighlights(inst);
   }
 
-  // 緊急停止（即座に一時停止するのみ）
-  function emergencyStop() {
-    if (player && typeof player.pauseVideo === 'function') {
-      player.pauseVideo();
+  function emergencyStop(inst) {
+    if (inst.player && typeof inst.player.pauseVideo === 'function') {
+      inst.player.pauseVideo();
     }
   }
 })();
