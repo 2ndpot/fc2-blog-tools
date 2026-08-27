@@ -1,7 +1,6 @@
 /* アプリ全体 */
 .yts-app {
-  max-width: 640px;
-  margin: 20px 0;
+  max-width: 100%;
   font-family: sans-serif;
 }
 
@@ -23,8 +22,7 @@
   top: 0;
   left: 0;
   width: 100%;
-  max-width: 100%;
-  aspect-ratio: 16 / 9;
+  height: 100%;
 }
 
 /* ボタン群 */
