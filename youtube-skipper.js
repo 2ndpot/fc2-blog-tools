@@ -87,7 +87,7 @@
           <button class="yts-btn yts-btn-danger" id="yts-btn-stop-${appIndex}">停止</button>
           <select class="yts-select yts-filter-select" id="yts-select-filter-${appIndex}">
             <option value="none">🎬 総天然色</option>
-            <option value="bw">📷 昭和モノクロ</option>
+            <option value="bw">📷 昭和白黒</option>
             <option value="sepia">📜 昭和セピア</option>
             <option value="film">🎞️ 8mmフィルム</option>
           </select>
