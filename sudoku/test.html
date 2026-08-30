@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>モジュール読み込みテスト</title>
+</head>
+<body>
+  <h1>モジュールテスト画面</h1>
+  <p>F12キーを押してコンソール（Console）を確認してください。</p>
+
+  <script type="module">
+    import { SOLVER_CONFIG } from './js/config.js';
+    import { getHouseName } from './js/logic/utils.js';
+    import { analyzeNextStep } from './js/logic/solver.js';
+
+    console.log("【✅ モジュール読み込み成功】");
+    console.log("設定オブジェクト:", SOLVER_CONFIG);
+    console.log("ユーティリティテスト(row):", getHouseName("row"));
+    console.log("ソルバー関数:", analyzeNextStep);
+  </script>
+</body>
+</html>
