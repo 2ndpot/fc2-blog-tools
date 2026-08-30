@@ -13,6 +13,13 @@
     return 0;
   }
 
+  function formatSecondsToTime(sec) {
+    const totalSec = Math.floor(sec);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  }
+
   document.addEventListener("DOMContentLoaded", function() {
     const jsonScripts = document.querySelectorAll('script.yts-config');
     if (jsonScripts.length === 0) return;
@@ -42,7 +49,9 @@
           ...t,
           index: index,
           startSec: parseTimeToSeconds(t.time),
-          currentCount: t.repeatCount
+          currentCount: t.repeatCount,
+          speed: t.speed !== undefined ? parseFloat(t.speed) : 1.0,
+          filter: t.filter || "none"
         }));
         for (let i = 0; i < vid.parsedTracks.length; i++) {
           vid.parsedTracks[i].endSec = (i < vid.parsedTracks.length - 1) ? vid.parsedTracks[i + 1].startSec : Infinity;
@@ -67,7 +76,6 @@
       
       const isMulti = playlist.length > 1;
 
-      // 操作卓にレトロフィルター切替（yts-select-filter）を追加
       appContainer.innerHTML = `
         ${isMulti ? `
         <div class="yts-playlist-nav">
@@ -167,6 +175,20 @@
     return inst.playlist[inst.currentVideoIndex].parsedTracks;
   }
 
+  function applyFilterUI(inst, filterValue) {
+    const embedWrapper = document.getElementById(`yts-embed-${inst.appIndex}`);
+    const filterSelect = document.getElementById(`yts-select-filter-${inst.appIndex}`);
+    if (embedWrapper) {
+      embedWrapper.classList.remove('yts-filter-bw', 'yts-filter-sepia', 'yts-filter-film');
+      if (filterValue !== 'none') {
+        embedWrapper.classList.add(`yts-filter-${filterValue}`);
+      }
+    }
+    if (filterSelect) {
+      filterSelect.value = filterValue;
+    }
+  }
+
   function renderTable(inst) {
     const tbody = document.getElementById(`yts-track-list-${inst.appIndex}`);
     if (!tbody) return;
@@ -182,10 +204,11 @@
       if (track.currentCount === 0) tr.classList.add('disabled');
 
       const tdTime = document.createElement('td');
+      const timeSpanId = `yts-time-disp-${inst.appIndex}-${track.index}`;
       if (track.currentCount === 0) {
-        tdTime.innerHTML = `<span class="yts-time-text">${track.time}</span>`;
+        tdTime.innerHTML = `<span class="yts-time-text" id="${timeSpanId}">${track.time}</span>`;
       } else {
-        tdTime.innerHTML = `<span class="yts-time-link" data-index="${track.index}">${track.time}</span>`;
+        tdTime.innerHTML = `<span class="yts-time-link" id="${timeSpanId}" data-index="${track.index}">${track.time}</span>`;
       }
 
       const tdCount = document.createElement('td');
@@ -231,16 +254,10 @@
     document.getElementById(`yts-btn-all1-${inst.appIndex}`).addEventListener('click', () => setAllTo(inst, 1));
     document.getElementById(`yts-btn-stop-${inst.appIndex}`).addEventListener('click', () => emergencyStop(inst));
 
-    // 昭和レトロフィルターの切り替えイベント処理
     const filterSelect = document.getElementById(`yts-select-filter-${inst.appIndex}`);
-    const embedWrapper = document.getElementById(`yts-embed-${inst.appIndex}`);
-    
-    if (filterSelect && embedWrapper) {
+    if (filterSelect) {
       filterSelect.addEventListener('change', (e) => {
-        embedWrapper.classList.remove('yts-filter-bw', 'yts-filter-sepia', 'yts-filter-film');
-        if (e.target.value !== 'none') {
-          embedWrapper.classList.add(`yts-filter-${e.target.value}`);
-        }
+        applyFilterUI(inst, e.target.value);
       });
     }
   }
@@ -283,9 +300,7 @@
 
     if (trackIdx !== -1) {
       if (trackIdx !== inst.currentTrackIndex) {
-        inst.currentTrackIndex = trackIdx;
-        inst.currentLoop = 1;
-        updateRowHighlights(inst);
+        onTrackChange(inst, trackIdx);
       }
 
       const currentTrack = tracks[inst.currentTrackIndex];
@@ -293,6 +308,12 @@
       if (currentTrack.currentCount === 0) {
         skipToNextValidTrack(inst, inst.currentTrackIndex);
         return;
+      }
+
+      // 🌟 1秒刻みのタイマーカウントアップ表示をリアルタイム更新
+      const activeTimeDisp = document.getElementById(`yts-time-disp-${inst.appIndex}-${currentTrack.index}`);
+      if (activeTimeDisp) {
+        activeTimeDisp.textContent = formatSecondsToTime(currentTime);
       }
 
       const isLastValidTrack = !hasNextValidTrack(inst, inst.currentTrackIndex + 1);
@@ -313,6 +334,33 @@
         }
       }
     }
+  }
+
+  function onTrackChange(inst, newTrackIdx) {
+    // 直前トラックの表示時間を初期値に復元
+    const tracks = getCurrentTracks(inst);
+    if (inst.currentTrackIndex !== -1 && tracks[inst.currentTrackIndex]) {
+      const prevTrack = tracks[inst.currentTrackIndex];
+      const prevDisp = document.getElementById(`yts-time-disp-${inst.appIndex}-${prevTrack.index}`);
+      if (prevDisp) prevDisp.textContent = prevTrack.time;
+    }
+
+    inst.currentTrackIndex = newTrackIdx;
+    inst.currentLoop = 1;
+
+    const targetTrack = tracks[newTrackIdx];
+    if (targetTrack) {
+      // 🌟 トラック固有の再生速度をセット
+      if (inst.player && typeof inst.player.setPlaybackRate === 'function') {
+        inst.player.setPlaybackRate(targetTrack.speed);
+      }
+      // 🌟 トラック固有のフィルターをセット
+      if (targetTrack.filter) {
+        applyFilterUI(inst, targetTrack.filter);
+      }
+    }
+
+    updateRowHighlights(inst);
   }
 
   function hasNextValidTrack(inst, startIndex) {
@@ -338,9 +386,8 @@
     if (index < 0 || index >= tracks.length) return;
     if (tracks[index].currentCount === 0) return;
     
-    inst.currentTrackIndex = index;
-    inst.currentLoop = 1;
-    updateRowHighlights(inst);
+    onTrackChange(inst, index);
+
     if (inst.player && typeof inst.player.seekTo === 'function') {
       inst.player.seekTo(tracks[index].startSec, true);
       inst.player.playVideo();
@@ -353,9 +400,7 @@
     const tracks = getCurrentTracks(inst);
     const idx = tracks.findIndex(t => currentTime >= t.startSec && currentTime < t.endSec);
     if (idx !== -1 && idx !== inst.currentTrackIndex) {
-      inst.currentTrackIndex = idx;
-      inst.currentLoop = 1;
-      updateRowHighlights(inst);
+      onTrackChange(inst, idx);
     }
   }
 
@@ -364,6 +409,8 @@
     tracks.forEach((t) => {
       const row = document.getElementById(`yts-track-row-${inst.appIndex}-${t.index}`);
       const loopCell = document.getElementById(`yts-track-loop-${inst.appIndex}-${t.index}`);
+      const timeDisp = document.getElementById(`yts-time-disp-${inst.appIndex}-${t.index}`);
+
       if (!row) return;
 
       if (t.index === inst.currentTrackIndex) {
@@ -375,6 +422,10 @@
         row.classList.remove('active');
         if (loopCell) {
           loopCell.textContent = '-';
+        }
+        // 非アクティブな行は本来の開始タイムに復元
+        if (timeDisp) {
+          timeDisp.textContent = t.time;
         }
       }
 

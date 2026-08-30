@@ -1,9 +1,6 @@
 /* ==================================================
-   YouTube Skipper - Retro Green VFD Display Edition
+   YouTube Skipper - Retro Standard Edition
    ================================================== */
-
-/* Google Fontsから7セグ・レトロデジタルフォントを読み込み */
-@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
 /* アプリ全体 */
 .yts-app {
@@ -99,7 +96,7 @@
 }
 
 .yts-table th, .yts-table td {
-  padding: 4px 6px;
+  padding: 6px 8px;
   font-size: 0.9rem;
   text-align: left;
   vertical-align: middle;
@@ -110,53 +107,39 @@
   border-bottom: 2px solid #ddd;
 }
 
-/* --- 🌟 7セグメント・レトロVFDグリーン表示 🌟 --- */
-.yts-time-link,
-.yts-time-text {
-  font-family: 'VT323', monospace !important;
-  font-size: 1.25rem !important;
-  line-height: 1;
-  color: #00ff66 !important; /* VFD管風のレトログリーン */
-  background-color: #05140a; /* ほんのり緑がかった暗いパネル地 */
-  padding: 2px 8px;
-  border-radius: 3px;
-  border: 1px solid #00441b;
-  display: inline-block;
-  letter-spacing: 1.5px;
-  /* グリーンネオン発光エフェクト */
-  text-shadow: 0 0 3px rgba(0, 255, 102, 0.9), 0 0 6px rgba(0, 255, 102, 0.4);
-  box-shadow: inset 0 0 4px rgba(0,0,0,0.8);
-}
-
+/* タイム表示スタイル */
 .yts-time-link {
+  color: #007bff;
   cursor: pointer;
+  text-decoration: underline;
+  font-weight: bold;
 }
 
 .yts-time-link:hover {
-  color: #66ff99 !important;
-  border-color: #008833;
-  text-shadow: 0 0 5px rgba(102, 255, 153, 1), 0 0 10px rgba(0, 255, 102, 0.8);
+  color: #0056b3;
 }
 
-/* n周目カウンターもデジタル調 */
+.yts-time-text {
+  color: #888;
+}
+
+/* n周目カウンター */
 .yts-loop-cell {
-  font-family: 'VT323', monospace;
-  font-size: 1.1rem;
-  letter-spacing: 1px;
+  font-weight: bold;
 }
 
 .yts-select {
   padding: 2px 4px;
 }
 
-/* 状態演出 */
+/* 行ハイライト状態演出 */
 .yts-track-row {
   transition: background-color 0.2s, opacity 0.2s;
 }
 
 .yts-track-row.active {
   background-color: #e3f2fd;
-  color: #0056b3;
+  font-weight: bold;
 }
 
 .yts-track-row.disabled {
@@ -165,7 +148,7 @@
 }
 
 /* --- 昭和レトロフィルター演出 --- */
-/* 昭和モノクロ */
+/* 昭和白黒 */
 .yts-filter-bw iframe {
   filter: grayscale(100%) contrast(120%);
 }
