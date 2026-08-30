@@ -378,7 +378,7 @@ import { SOLVER_CONFIG, UI_CONFIG } from './js/config.js';
       writeLog(`【🖐️手動介入】R${cell.row + 1}C${cell.col + 1} から 候補数字 [${num}] を手動削除しました。`, "manual");
     }
 
-    /* 手動変更があったため、プレビューフェーズへリセットして手筋ボタンを有効化 */
+    /* 手動変更があったため、フェーズをリセットし「進む」ボタンを確実に有効化 */
     nextPhase = "preview";
     currentMove = null;
     btnNext.disabled = false;
@@ -561,7 +561,8 @@ import { SOLVER_CONFIG, UI_CONFIG } from './js/config.js';
     render();
   }
 
-  function stepForward() {
+function stepForward() {
+    // ボタンが効かない状態なら何もしない
     if (btnNext.disabled) return;
 
     pushHistory();
