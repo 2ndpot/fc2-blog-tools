@@ -112,7 +112,7 @@
           <thead>
             <tr>
               <th style="width: 15%;">時間</th>
-              <th style="width: 20%;">リピ回数</th>
+              <th style="width: 20%;">リピート数</th>
               <th style="width: 15%;">n周目</th>
               <th>トラック名</th>
             </tr>
@@ -158,7 +158,6 @@
   function switchVideo(inst, newVideoIdx, autoPlay = true) {
     if (newVideoIdx < 0 || newVideoIdx >= inst.playlist.length) return;
     
-    // 🌟 動画切り替え時に弾幕とタイマーを完全停止・消去
     clearAllDanmaku(inst);
 
     inst.currentVideoIndex = newVideoIdx;
@@ -349,6 +348,13 @@
               }
               syncCurrentTrackIndex(inst);
             }
+            // 🌟 シークバー操作等でYouTube動画が物理的に終了した場合のフォールバック
+            else if (e.data === YT.PlayerState.ENDED) {
+              clearAllDanmaku(inst);
+              if (inst.currentVideoIndex < inst.playlist.length - 1) {
+                switchVideo(inst, inst.currentVideoIndex + 1, true);
+              }
+            }
           }
         }
       });
@@ -393,11 +399,9 @@
           if (!isLastValidTrack) {
             skipToNextValidTrack(inst, inst.currentTrackIndex + 1);
           } else {
-            // 🌟 最終トラック完了時：次の動画があれば自動切り替え
             if (inst.currentVideoIndex < inst.playlist.length - 1) {
               switchVideo(inst, inst.currentVideoIndex + 1, true);
             } else {
-              // 全動画終了時：弾幕を停止
               clearAllDanmaku(inst);
             }
           }
