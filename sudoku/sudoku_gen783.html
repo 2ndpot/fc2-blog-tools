@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>数独ブログ生成・検証エンジン (Ver 7.83 Manual Elimination)</title>
+  <style>
+    :root {
+      --border-main: #333; 
+      --border-inner: #ccc;
+      --bg-given: #e1f5fe; 
+      --bg-solved: #e8f5e9; 
+      --bg-err: #ffebee;
+      --text-given: #000; 
+      --text-solved: #2e7d32; 
+      --text-cand: #777;
+      
+      /* ハイライトカラー定義 */
+      --hl-blue-bg: #e3f2fd;
+      --hl-blue-border: #2196f3;
+      
+      --hl-red-bg: #ffebee;
+      --hl-red-text: #d32f2f;
+      
+      --cell-size: min(50px, 9vw);
+    }
+    body { font-family: sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }
+    
+    .layout { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 1100px; margin: 0 auto; }
+    @media (min-width: 800px) { 
+      .layout { grid-template-columns: 1fr 430px; } 
+    }
+    
+    .panel { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    h2, h3 { margin-top: 0; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; margin-bottom: 5px; font-size: 0.85rem; }
+    input[type="text"] { width: 100%; padding: 8px; font-family: monospace; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    
+    /* 盤面コンテナ（SVG重ね合わせ用） */
+    .board-container {
+      position: relative;
+      width: 100%;
+      max-width: calc(var(--cell-size) * 9);
+      margin: 0 auto 15px;
+      aspect-ratio: 1;
+    }
+
+    /* 数独盤面 */
+    .board { 
+      display: grid; 
+      grid-template-columns: repeat(9, 1fr); 
+      grid-template-rows: repeat(9, 1fr); 
+      border: 3px solid var(--border-main); 
+      width: 100%; 
+      height: 100%;
+      box-sizing: border-box; 
+      background: #fff; 
+    }
+
+    /* SVGオーバーレイレイヤー */
+    .svg-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .cell { border: 1px solid var(--border-inner); box-sizing: border-box; display: flex; align-items: center; justify-content: center; position: relative; transition: all 0.2s; }
+    .cell:nth-child(3n) { border-right: 2px solid var(--border-main); }
+    .cell:nth-child(9n) { border-right: none; }
+    .cell:nth-child(n+19):nth-child(-n+27), 
+    .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid var(--border-main); }
+    
+    .cell[data-status="given"] { background: var(--bg-given); color: var(--text-given); font-weight: bold; font-size: calc(var(--cell-size) * 0.5); }
+    .cell[data-status="solved"] { background: var(--bg-solved); color: var(--text-solved); font-weight: bold; font-size: calc(var(--cell-size) * 0.5); }
+    .cell[data-err="true"] { background: var(--bg-err) !important; outline: 2px solid #c62828; z-index: 1; }
+    
+    /* マス単位の青ハイライト */
+    .cell.hl-blue-cell { background: var(--hl-blue-bg) !important; outline: 3px solid var(--hl-blue-border); z-index: 2; }
+    
+    .cand-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); width: 100%; height: 100%; padding: 2px; box-sizing: border-box; }
+    .cand-num { display: flex; align-items: center; justify-content: center; font-size: calc(var(--cell-size) * 0.22); color: var(--text-cand); line-height: 1; border-radius: 2px; font-weight: bold; user-select: none; }
+    
+    /* 手動削去時のホバーエフェクト */
+    .cand-num.interactive { cursor: pointer; transition: background-color 0.1s, color 0.1s; }
+    .cand-num.interactive:hover { background-color: #ffcdd2 !important; color: #b71c1c !important; }
+
+    /* 候補数字の手筋用ハイライト */
+    .cand-num.hl-blue { background: var(--hl-blue-border); color: #fff !important; }
+    .cand-num.hl-red  { background: var(--hl-red-bg); color: var(--hl-red-text) !important; outline: 1px solid var(--hl-red-text); font-weight: bold; }
+
+    /* 数字強調・共役対（チェーン用）ハイライト */
+    .cand-num.hl-chain-weak   { background: #e0f7fa; color: #006064 !important; font-weight: bold; }
+    .cand-num.hl-chain-strong { background: #00bcd4; color: #fff !important; font-weight: bold; outline: 1px solid #006064; }
+
+    /* テープデッキ風 操作ボタンエリア（4分割均等） */
+    .step-controls { 
+      display: grid; 
+      grid-template-columns: repeat(4, 1fr); 
+      gap: 6px; 
+      margin-bottom: 15px; 
+    }
+
+    .btn-deck {
+      width: 100%;
+      padding: 10px 2px;
+      font-size: 0.8rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      transition: background-color 0.2s;
+    }
+
+    /* 各ボタンのカラーデザイン */
+    .btn-deck-reset { background: #e0e0e0; color: #333; }
+    .btn-deck-reset:hover { background: #d5d5d5; }
+
+    .btn-deck-prev { background: #6c757d; color: white; border-color: #5a6268; }
+    .btn-deck-prev:hover { background: #5a6268; }
+
+    .btn-deck-next { background: #ff9800; color: white; border-color: #f57c00; }
+    .btn-deck-next:hover { background: #f57c00; }
+
+    .btn-deck-ff { background: #0288d1; color: white; border-color: #0277bd; }
+    .btn-deck-ff:hover { background: #0277bd; }
+
+    .btn-deck:disabled { background: #e0e0e0 !important; color: #aaa !important; border-color: #ccc !important; cursor: not-allowed; }
+
+    .btn-blue { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-blue:hover { background: #0056b3; }
+    .btn-green { padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .btn-green:hover { background: #218838; }
+    .btn-tgl { padding: 6px 12px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer; }
+    
+    /* 数字強調ボタン群グループ */
+    .digit-btn-group { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+    .btn-digit { flex: 1; min-width: 28px; padding: 6px 0; border: 1px solid #00838f; background: #e0f7fa; color: #006064; border-radius: 4px; cursor: pointer; }
+    .btn-digit:hover { background: #b2ebf2; }
+    .btn-digit.active { background: #0288d1; color: #fff; }
+    .btn-digit-clear { padding: 6px 8px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+    .btn-digit-clear:hover { background: #f0f0f0; }
+
+    /* ログエリア */
+    .log { background: #1e1e1e; color: #dee2e6; border-radius: 4px; height: 280px; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; }
+    .log-err    { color: #f44336; }
+    .log-ok     { color: #4ec9b0; padding-left: 8px; }
+    .log-info   { color: #858585; padding-left: 8px; }
+    .log-twin   { color: #ffb74d; padding-left: 8px; }
+    .log-htwin  { color: #b5cea8; padding-left: 8px; }
+    .log-locked { color: #9cdcfe; padding-left: 8px; }
+    .log-triple { color: #eec543; padding-left: 8px; }
+    .log-htriple{ color: #fcb9b2; padding-left: 8px; }
+    .log-quad   { color: #dcdcaa; padding-left: 8px; }
+    .log-hquad  { color: #c586c0; padding-left: 8px; }
+    .log-xchain { color: #ce93d8; padding-left: 8px; }
+    .log-bug    { color: #ff7043; padding-left: 8px; }
+    .log-manual { color: #e91e63; padding-left: 8px; }
+    
+    textarea { width: 100%; height: 65px; font-family: monospace; font-size: 0.82rem; padding: 6px; box-sizing: border-box; resize: none; background: #f8f9fa; margin-top: 5px; }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- 左ペイン：ビューアとログ -->
+  <div class="panel">
+    <!-- テープデッキ風コントロールボタン（均等サイズ） -->
+    <div class="step-controls">
+      <button class="btn-deck btn-deck-reset" id="btn-reset">⏪ 最初に戻る</button>
+      <button class="btn-deck btn-deck-prev" id="btn-prev" disabled>◀️ 1ステップ戻る</button>
+      <button class="btn-deck btn-deck-next" id="btn-next">1ステップ進む ▶️</button>
+      <button class="btn-deck btn-deck-ff" id="btn-auto">一気に進む ⏩</button>
+    </div>
+
+    <!-- 盤面とSVGラインの重ね合わせコンテナ -->
+    <div class="board-container">
+      <div class="board" id="grid"></div>
+      <svg class="svg-overlay" id="svg-overlay"></svg>
+    </div>
+
+    <h3>🔍 解析ログ</h3>
+    <div class="log" id="log"></div>
+  </div>
+
+  <!-- 右ペイン：コントロールパネル -->
+  <div class="panel">
+    <h2>データ入力・管理</h2>
+    <div class="form-group">
+      <label>管理タイトル</label>
+      <input type="text" id="in-title" value="Ver 7.83 Manual Elimination">
+    </div>
+    <button class="btn-tgl" id="btn-clear" style="width: 100%; margin-bottom: 12px; background: #e0e0e0; color: #333; border: 1px solid #ccc;">全入力をクリア</button>
+    
+    <div class="form-group">
+      <label>1. 初期問題グリッド (81桁)</label>
+      <input type="text" id="in-init" value="000001000073086400000000031009100005700040000006000090000530260294000000000000007">
+    </div>
+    <div class="form-group">
+      <label>2. 途中・現在グリッド (81桁)</label>
+      <input type="text" id="in-curr" value="000001000073086400000000031009100005700040000006000090000530260294000000000000007">
+    </div>
+    <button class="btn-blue" id="btn-init-engine">盤面を読み込む</button>
+
+    <!-- 特定数字の強調 ＆ 共役対（強鎖）可視化フィルター -->
+    <div class="form-group" style="margin-top: 15px; background: #f0f4f8; padding: 10px; border-radius: 6px; border: 1px solid #d0d7de;">
+      <label>🔗 数字強調 & 共役対（強鎖）フィルター</label>
+      <div class="digit-btn-group" id="digit-buttons"></div>
+    </div>
+
+    <div style="margin-top:15px;">
+      <label>💻 ブログ埋め込み用 JSON 出力</label>
+      <textarea id="out-json" readonly></textarea>
+      <button class="btn-green" id="btn-copy">JSONをコピー</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { analyzeNextStep } from './js/logic/solver.js';
+import { SOLVER_CONFIG, UI_CONFIG } from './js/config.js';
+
+(() => {
+  let memoryGrid = [];
+  let showCand = false;
+  let isCandidateInitialized = false;
+  let nextPhase = "preview";
+  let currentMove = null;
+  
+  let selectedDigit = null;
+  let historyStack = [];
+  let highlights = { blueCells: [], blueCands: [], redCands: [], chainLinks: [] };
+
+  const elTitle  = document.getElementById("in-title");
+  const elInit   = document.getElementById("in-init");
+  const elCurr   = document.getElementById("in-curr");
+  const elGrid   = document.getElementById("grid");
+  const elSvg    = document.getElementById("svg-overlay");
+  const elLog    = document.getElementById("log");
+  const elOut    = document.getElementById("out-json");
+  const btnNext  = document.getElementById("btn-next");
+  const btnPrev  = document.getElementById("btn-prev");
+
+  function writeLog(text, type = "") {
+    const div = document.createElement("div");
+    if (type) div.className = `log-${type}`;
+    div.textContent = text;
+    elLog.appendChild(div);
+    elLog.scrollTop = elLog.scrollHeight;
+  }
+
+  function clearHighlights() {
+    highlights = { blueCells: [], blueCands: [], redCands: [], chainLinks: [] };
+  }
+
+  function initDigitButtons() {
+    const container = document.getElementById("digit-buttons");
+    container.innerHTML = "";
+    for (let i = 1; i <= 9; i++) {
+      const btn = document.createElement("button");
+      btn.className = "btn-digit";
+      btn.textContent = i;
+      btn.addEventListener("click", () => selectDigitForChain(i));
+      container.appendChild(btn);
+    }
+    const btnClear = document.createElement("button");
+    btnClear.className = "btn-digit-clear";
+    btnClear.textContent = "解除";
+    btnClear.addEventListener("click", () => selectDigitForChain(null));
+    container.appendChild(btnClear);
+  }
+
+  function selectDigitForChain(num) {
+    selectedDigit = (selectedDigit === num) ? null : num;
+    document.querySelectorAll(".btn-digit").forEach((btn, idx) => {
+      if (idx + 1 === selectedDigit) btn.classList.add("active");
+      else btn.classList.remove("active");
+    });
+    render();
+  }
+
+  function getConjugatePairs(grid, num) {
+    if (!num) return { weakCells: [], strongCells: [] };
+
+    const strongSet = new Set();
+    const weakSet = new Set();
+
+    grid.forEach(c => {
+      if (c.status === "candidate" && c.val.includes(num)) {
+        weakSet.add(c);
+      }
+    });
+
+    ["row", "col", "box"].forEach(houseType => {
+      for (let hIdx = 0; hIdx < 9; hIdx++) {
+        const houseCells = grid.filter(c => c.status === "candidate" && c[houseType] === hIdx && c.val.includes(num));
+        if (houseCells.length === 2) {
+          strongSet.add(houseCells[0]);
+          strongSet.add(houseCells[1]);
+        }
+      }
+    });
+
+    return {
+      weakCells: Array.from(weakSet),
+      strongCells: Array.from(strongSet)
+    };
+  }
+
+  function pushHistory() {
+    const state = {
+      grid: JSON.parse(JSON.stringify(memoryGrid)),
+      showCand: showCand,
+      isCandidateInitialized: isCandidateInitialized,
+      nextPhase: nextPhase,
+      currentMove: currentMove ? JSON.parse(JSON.stringify(currentMove)) : null,
+      highlights: {
+        blueCellsCoords: highlights.blueCells.map(c => ({ row: c.row, col: c.col })),
+        blueCandsCoords: highlights.blueCands.map(h => ({ row: h.cell.row, col: h.cell.col, num: h.num })),
+        redCandsCoords: highlights.redCands.map(h => ({ row: h.cell.row, col: h.cell.col, num: h.num })),
+        chainLinks: highlights.chainLinks ? JSON.parse(JSON.stringify(highlights.chainLinks)) : []
+      },
+      logHTML: elLog.innerHTML,
+      btnNextDisabled: btnNext.disabled
+    };
+    historyStack.push(state);
+    btnPrev.disabled = false;
+  }
+
+  function stepBack() {
+    if (historyStack.length === 0) return;
+
+    const prevState = historyStack.pop();
+    memoryGrid = prevState.grid;
+    showCand = prevState.showCand;
+    isCandidateInitialized = prevState.isCandidateInitialized;
+    nextPhase = prevState.nextPhase;
+    currentMove = prevState.currentMove;
+    elLog.innerHTML = prevState.logHTML;
+    btnNext.disabled = prevState.btnNextDisabled;
+
+    highlights.blueCells = prevState.highlights.blueCellsCoords.map(pos => 
+      memoryGrid.find(c => c.row === pos.row && c.col === pos.col)
+    ).filter(Boolean);
+
+    highlights.blueCands = prevState.highlights.blueCandsCoords.map(pos => ({
+      cell: memoryGrid.find(c => c.row === pos.row && c.col === pos.col),
+      num: pos.num
+    })).filter(h => h.cell);
+
+    highlights.redCands = prevState.highlights.redCandsCoords.map(pos => ({
+      cell: memoryGrid.find(c => c.row === pos.row && c.col === pos.col),
+      num: pos.num
+    })).filter(h => h.cell);
+
+    highlights.chainLinks = prevState.highlights.chainLinks || [];
+
+    if (historyStack.length === 0) {
+      btnPrev.disabled = true;
+    }
+    render();
+  }
+
+  /* 手動で候補数字を消去する処理 */
+  function removeCandidateManually(cell, num) {
+    pushHistory();
+    clearHighlights();
+    
+    const idx = cell.val.indexOf(num);
+    if (idx > -1) {
+      cell.val.splice(idx, 1);
+      writeLog(`【🖐️手動介入】R${cell.row + 1}C${cell.col + 1} から 候補数字 [${num}] を手動削除しました。`, "manual");
+    }
+
+    /* 手動変更があったため、プレビューフェーズへリセットして手筋ボタンを有効化 */
+    nextPhase = "preview";
+    currentMove = null;
+    btnNext.disabled = false;
+
+    render();
+  }
+
+  function checkValid(str, name) {
+    if (str.length !== 81) { writeLog(`【❌エラー】${name}が81桁ではありません。`, "err"); return false; }
+    if (!/^[0-9]+$/.test(str)) { writeLog(`【❌エラー】${name}に数字以外が含まれています。`, "err"); return false; }
+    return true;
+  }
+
+  function checkDup(grid) {
+    let err = false;
+    grid.forEach((c, i) => {
+      if (c.status === "candidate") return;
+      grid.forEach((t, ti) => {
+        if (i === ti || t.status === "candidate") return;
+        if (c.val === t.val && (c.row === t.row || c.col === t.col || c.box === t.box)) {
+          c.err = t.err = err = true;
+          writeLog(`【❌重複エラー】R${c.row+1}C${c.col+1} と R${t.row+1}C${t.col+1} で「${c.val}」が重複。`, "err");
+        }
+      });
+    });
+    return err;
+  }
+
+  function initCandidates(grid) {
+    grid.forEach(c => {
+      if (c.status !== "candidate") return;
+      const used = new Set();
+      grid.forEach(t => {
+        if (t.status !== "candidate" && (t.row === c.row || t.col === c.col || t.box === c.box)) {
+          used.add(t.val);
+        }
+      });
+      c.val = [];
+      for (let i = 1; i <= 9; i++) if (!used.has(i)) c.val.push(i);
+    });
+  }
+
+  function renderOverlayLines() {
+    elSvg.innerHTML = "";
+    if (!highlights.chainLinks || highlights.chainLinks.length === 0) return;
+
+    const boardRect = elGrid.getBoundingClientRect();
+    const cellW = boardRect.width / 9;
+    const cellH = boardRect.height / 9;
+
+    highlights.chainLinks.forEach(link => {
+      const num = link.num || 1;
+      
+      const subRow = Math.floor((num - 1) / 3);
+      const subCol = (num - 1) % 3;
+
+      const x1 = (link.from.col + (subCol + 0.5) / 3) * cellW;
+      const y1 = (link.from.row + (subRow + 0.5) / 3) * cellH;
+      const x2 = (link.to.col + (subCol + 0.5) / 3) * cellW;
+      const y2 = (link.to.row + (subRow + 0.5) / 3) * cellH;
+
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", x1);
+      line.setAttribute("y1", y1);
+      line.setAttribute("x2", x2);
+      line.setAttribute("y2", y2);
+
+      if (link.type === "strong") {
+        line.setAttribute("stroke", "#8e24aa");
+        line.setAttribute("stroke-width", "3.5");
+        line.setAttribute("stroke-linecap", "round");
+      } else {
+        line.setAttribute("stroke", "#e65100");
+        line.setAttribute("stroke-width", "3");
+        line.setAttribute("stroke-dasharray", "5,5");
+        line.setAttribute("stroke-linecap", "round");
+      }
+
+      elSvg.appendChild(line);
+    });
+  }
+
+  function render() {
+    elGrid.innerHTML = "";
+    
+    const chainInfo = getConjugatePairs(memoryGrid, selectedDigit);
+
+    memoryGrid.forEach(c => {
+      const el = document.createElement("div"); 
+      el.className = "cell"; 
+      el.setAttribute("data-status", c.status);
+      if (c.err) el.setAttribute("data-err", "true");
+      
+      if (highlights.blueCells.includes(c)) {
+        el.classList.add("hl-blue-cell");
+      }
+
+      if (c.status !== "candidate") {
+        el.textContent = c.val;
+      } else if (showCand) {
+        const g = document.createElement("div"); 
+        g.className = "cand-grid";
+        for (let i = 1; i <= 9; i++) {
+          const n = document.createElement("div"); 
+          n.className = "cand-num";
+          
+          if (c.val.includes(i)) {
+            n.textContent = i;
+            n.classList.add("interactive");
+            n.title = `クリックで R${c.row+1}C${c.col+1} から「${i}」を手動削除`;
+            
+            /* 手動削除イベント追加 */
+            n.addEventListener("click", (e) => {
+              e.stopPropagation();
+              removeCandidateManually(c, i);
+            });
+
+            const isBlue = highlights.blueCands.some(h => h.cell === c && h.num === i);
+            const isRed  = highlights.redCands.some(h => h.cell === c && h.num === i);
+
+            if (isBlue) {
+              n.classList.add("hl-blue");
+            } else if (isRed) {
+              n.classList.add("hl-red");
+            } else if (selectedDigit === i) {
+              if (chainInfo.strongCells.includes(c)) {
+                n.classList.add("hl-chain-strong");
+              } else if (chainInfo.weakCells.includes(c)) {
+                n.classList.add("hl-chain-weak");
+              }
+            }
+          }
+          g.appendChild(n);
+        }
+        el.appendChild(g);
+      }
+      elGrid.appendChild(el);
+    });
+
+    renderOverlayLines();
+
+    const outStr = memoryGrid.map(c => c.status === "candidate" ? 0 : c.val).join('');
+    elOut.value = JSON.stringify({ title: elTitle.value, grid: outStr }, null, 2);
+  }
+
+  function setupEngine() {
+    elLog.innerHTML = ""; 
+    clearHighlights();
+    historyStack = [];
+    btnPrev.disabled = true;
+    btnNext.disabled = false;
+    showCand = false;
+    isCandidateInitialized = false;
+    nextPhase = "preview";
+    currentMove = null;
+
+    const sInit = elInit.value.trim();
+    let sCurr = elCurr.value.trim();
+
+    if (sCurr === "") {
+      sCurr = sInit;
+      elCurr.value = sInit;
+      writeLog(">> 途中・現在グリッドが空白のため、初期問題を自動コピーしました。", "info");
+    }
+
+    if (!checkValid(sInit, "初期データ") || !checkValid(sCurr, "途中データ")) return;
+
+    memoryGrid = sInit.split('').map((v, i) => {
+      const vi = parseInt(v, 10), vc = parseInt(sCurr[i], 10), r = Math.floor(i / 9), c = i % 9, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+      if (vi !== 0) return { val: vi, status: "given", row: r, col: c, box: b, err: false };
+      if (vc !== 0) return { val: vc, status: "solved", row: r, col: c, box: b, err: false };
+      return { val: [], status: "candidate", row: r, col: c, box: b, err: false };
+    });
+
+    if (checkDup(memoryGrid)) { render(); elOut.value = "エラーのため出力不可"; return; }
+    
+    initCandidates(memoryGrid);
+    writeLog("盤面を読み込みました。", "ok");
+
+    render();
+  }
+
+  function stepForward() {
+    if (btnNext.disabled) return;
+
+    pushHistory();
+
+    if (!isCandidateInitialized) {
+      showCand = true;
+      isCandidateInitialized = true;
+      writeLog("候補数字を表示しました。", "info");
+      render();
+      return;
+    }
+
+    if (nextPhase === "preview") {
+      clearHighlights();
+
+      // モジュール化された解析関数を実行
+      const move = analyzeNextStep(memoryGrid);
+
+      if (move === "cleared") {
+        writeLog("🎉 すべてのマスが論理手筋のみで美しく埋まりました！完全クリアです。", "ok");
+        btnNext.disabled = true;
+        render();
+        return;
+      }
+
+      if (move === "stuck") {
+        writeLog("これ以上、論理手筋で進められるマスが見つかりませんでした。", "info");
+        btnNext.disabled = true;
+        render();
+        return;
+      }
+
+      currentMove = move;
+      highlights.blueCells  = move.blueCells  || [];
+      highlights.blueCands  = move.blueCands  || [];
+      highlights.redCands   = move.redCands   || [];
+      highlights.chainLinks = move.chainLinks || [];
+
+      writeLog(move.logMsg, move.logClass);
+      nextPhase = "execute";
+
+    } else if (nextPhase === "execute") {
+      if (currentMove) {
+        if (currentMove.name === "Naked Single" || currentMove.name === "Hidden Single" || currentMove.name === "BUG+1") {
+          const target = memoryGrid.find(c => c.row === currentMove.targetRow && c.col === currentMove.targetCol);
+          if (target) {
+            target.status = "solved";
+            target.val = currentMove.val;
+            writeLog(`  └ 確定：R${target.row+1}C${target.col+1} に 「${currentMove.val}」 を書き込みました。`, "info");
+          }
+        } else {
+          writeLog(`  └ 削除：対象の赤色候補数字を削除しました。`, "info");
+        }
+
+        currentMove.redCands.forEach(rc => {
+          const cell = memoryGrid.find(c => c.row === rc.row && c.col === rc.col);
+          if (cell && cell.status === "candidate") {
+            const idx = cell.val.indexOf(rc.num);
+            if (idx > -1) cell.val.splice(idx, 1);
+          }
+        });
+      }
+
+      clearHighlights();
+      currentMove = null;
+      nextPhase = "preview";
+    }
+
+    render();
+  }
+
+  window.addEventListener("resize", () => {
+    renderOverlayLines();
+  });
+
+  document.getElementById("btn-init-engine").addEventListener("click", setupEngine);
+  btnNext.addEventListener("click", stepForward);
+  btnPrev.disabled = true;
+  btnPrev.addEventListener("click", stepBack);
+
+  document.getElementById("btn-auto").addEventListener("click", () => {
+    while (!btnNext.disabled) {
+      stepForward();
+    }
+  });
+
+  document.getElementById("btn-reset").addEventListener("click", setupEngine);
+
+  document.getElementById("btn-copy").addEventListener("click", () => { 
+    elOut.select(); 
+    document.execCommand("copy"); 
+    alert("JSONをコピーしました！"); 
+  });
+  
+  document.getElementById("btn-clear").addEventListener("click", () => {
+    if (!confirm("すべての入力データ、検証ログ、出力JSONをリセットしますか？")) return;
+    elTitle.value = new Date().toISOString().split('T')[0];
+    elInit.value = "";
+    elCurr.value = "";
+    elOut.value = "";
+    memoryGrid = [];
+    historyStack = [];
+    clearHighlights();
+    selectedDigit = null;
+    btnPrev.disabled = true;
+    elLog.innerHTML = "";
+    writeLog("システムをリセットしました。", "info");
+    render();
+  });
+
+  initDigitButtons();
+  setupEngine();
+})();
+</script>
+
+</body>
+</html>
