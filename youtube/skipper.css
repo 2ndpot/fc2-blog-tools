@@ -28,19 +28,18 @@
   height: 100%;
 }
 
-/* 🌟 ニコニコ風・弾幕ステージ 🌟 */
+/* ニコニコ風・弾幕ステージ */
 .yts-danmaku-stage {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none; /* 動画クリックの邪魔をしない */
+  pointer-events: none;
   z-index: 10;
   overflow: hidden;
 }
 
-/* 流れる文字のスタイル */
 .yts-bullet {
   position: absolute;
   white-space: nowrap;
@@ -53,10 +52,10 @@
 
 @keyframes yts-danmaku-fly {
   from {
-    transform: translateX(100vw); /* 画面右端の外から */
+    transform: translateX(100vw);
   }
   to {
-    transform: translateX(-100%); /* 画面左端の外へ */
+    transform: translateX(-100%);
   }
 }
 
@@ -95,7 +94,6 @@
   margin-bottom: 8px;
 }
 
-/* 弾幕入力フォーム */
 .yts-comment-form {
   display: flex;
   gap: 6px;
@@ -174,14 +172,14 @@
   animation: yts-film-flicker 0.12s infinite alternate;
 }
 
-/* 🌟 昭和白黒 ＋ 上下逆さま 🌟 */
+/* 🌟 昭和白黒 ＋ 上下逆さま（余白が出ないよう若干拡大） 🌟 */
 .yts-filter-bw-flip iframe {
   filter: grayscale(100%) contrast(120%);
-  transform: rotate(180deg);
+  transform: rotate(180deg) scale(1.05);
 }
 
 @keyframes yts-film-flicker {
   0% { opacity: 0.92; transform: scale(1) translate(0, 0); }
   50% { opacity: 0.98; transform: scale(1.002) translate(-0.5px, 0.5px); }
-  100% { opacity: 0.88; transform: scale(1) translate(0.5px, -0.5px); }
+  100% { opacity: 0.88; transform: scale(0.998) translate(0.5px, -0.5px); }
 }

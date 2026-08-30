@@ -89,7 +89,6 @@
         <div class="yts-player-wrapper">
           <div class="yts-embed-responsive" id="yts-embed-${appIndex}">
             <div id="yts-yt-player-${appIndex}"></div>
-            <!-- 🌟 弾幕表示用レイヤー -->
             <div class="yts-danmaku-stage" id="yts-danmaku-${appIndex}"></div>
           </div>
         </div>
@@ -105,7 +104,6 @@
             <option value="bw-flip">🙃 白黒(逆さま)</option>
           </select>
         </div>
-        <!-- 🌟 リアルタイム弾幕投稿フォーム -->
         <div class="yts-comment-form">
           <input type="text" id="yts-comment-input-${appIndex}" placeholder="コメント（弾幕）を入力..." />
           <button class="yts-btn" id="yts-comment-btn-${appIndex}">送信</button>
@@ -199,7 +197,6 @@
     }
   }
 
-  // 🌟 画面に文字（弾幕）を一発流す関数
   function shootDanmaku(inst, text) {
     const stage = document.getElementById(`yts-danmaku-${inst.appIndex}`);
     if (!stage || !text) return;
@@ -208,28 +205,30 @@
     span.className = 'yts-bullet';
     span.textContent = text;
 
-    // 上下の位置を 5% 〜 85% の間でランダム指定
     const topPos = Math.floor(Math.random() * 80) + 5;
     span.style.top = topPos + '%';
 
-    // 流れる速度を 3〜5秒の間でランダム指定
     const duration = (Math.random() * 2 + 3).toFixed(1);
     span.style.animationDuration = `${duration}s`;
 
     stage.appendChild(span);
 
-    // アニメーション終了後に自動で要素削除
     setTimeout(() => {
       if (span.parentNode) span.parentNode.removeChild(span);
     }, duration * 1000);
   }
 
-  // 🌟 トラック固有の自動弾幕タイマーをセット
-  function startDanmakuLoop(inst, comments) {
+  // 🌟 画面上の弾幕をすべて消去する関数
+  function clearAllDanmaku(inst) {
     if (inst.commentInterval) clearInterval(inst.commentInterval);
+    const stage = document.getElementById(`yts-danmaku-${inst.appIndex}`);
+    if (stage) stage.innerHTML = '';
+  }
+
+  function startDanmakuLoop(inst, comments) {
+    clearAllDanmaku(inst);
     if (!comments || comments.length === 0) return;
 
-    // 0.4秒ごとにランダムなコメントを流す
     inst.commentInterval = setInterval(() => {
       const randomText = comments[Math.floor(Math.random() * comments.length)];
       shootDanmaku(inst, randomText);
@@ -308,7 +307,6 @@
       });
     }
 
-    // 🌟 弾幕送信フォームイベント
     const input = document.getElementById(`yts-comment-input-${inst.appIndex}`);
     const btn = document.getElementById(`yts-comment-btn-${inst.appIndex}`);
     const sendFn = () => {
@@ -409,6 +407,9 @@
     inst.currentTrackIndex = newTrackIdx;
     inst.currentLoop = 1;
 
+    // 🌟 曲が変わったら前曲の残像弾幕を完全消去！
+    clearAllDanmaku(inst);
+
     const targetTrack = tracks[newTrackIdx];
     if (targetTrack) {
       if (inst.player && typeof inst.player.setPlaybackRate === 'function') {
@@ -417,7 +418,6 @@
       if (targetTrack.filter) {
         applyFilterUI(inst, targetTrack.filter);
       }
-      // 🌟 弾幕自動生成の開始
       startDanmakuLoop(inst, targetTrack.comments);
     }
 
