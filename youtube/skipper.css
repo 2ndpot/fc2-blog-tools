@@ -172,14 +172,14 @@
   animation: yts-film-flicker 0.12s infinite alternate;
 }
 
-/* 🌟 昭和白黒 ＋ 上下逆さま（余白が出ないよう若干拡大） 🌟 */
+/* 昭和白黒 ＋ 上下逆さま（シンプル180度回転のみ） */
 .yts-filter-bw-flip iframe {
   filter: grayscale(100%) contrast(120%);
-  transform: rotate(180deg) scale(1.05);
+  transform: rotate(180deg);
 }
 
 @keyframes yts-film-flicker {
-  0% { opacity: 0.92; transform: scale(1) translate(0, 0); }
-  50% { opacity: 0.98; transform: scale(1.002) translate(-0.5px, 0.5px); }
-  100% { opacity: 0.88; transform: scale(0.998) translate(0.5px, -0.5px); }
+  0% { opacity: 0.92; }
+  50% { opacity: 0.98; }
+  100% { opacity: 0.88; }
 }
