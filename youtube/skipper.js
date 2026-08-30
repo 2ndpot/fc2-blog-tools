@@ -157,6 +157,10 @@
 
   function switchVideo(inst, newVideoIdx, autoPlay = true) {
     if (newVideoIdx < 0 || newVideoIdx >= inst.playlist.length) return;
+    
+    // 🌟 動画切り替え時に弾幕とタイマーを完全停止・消去
+    clearAllDanmaku(inst);
+
     inst.currentVideoIndex = newVideoIdx;
     inst.currentTrackIndex = -1;
     inst.currentLoop = 1;
@@ -218,9 +222,11 @@
     }, duration * 1000);
   }
 
-  // 🌟 画面上の弾幕をすべて消去する関数
   function clearAllDanmaku(inst) {
-    if (inst.commentInterval) clearInterval(inst.commentInterval);
+    if (inst.commentInterval) {
+      clearInterval(inst.commentInterval);
+      inst.commentInterval = null;
+    }
     const stage = document.getElementById(`yts-danmaku-${inst.appIndex}`);
     if (stage) stage.innerHTML = '';
   }
@@ -387,8 +393,12 @@
           if (!isLastValidTrack) {
             skipToNextValidTrack(inst, inst.currentTrackIndex + 1);
           } else {
+            // 🌟 最終トラック完了時：次の動画があれば自動切り替え
             if (inst.currentVideoIndex < inst.playlist.length - 1) {
               switchVideo(inst, inst.currentVideoIndex + 1, true);
+            } else {
+              // 全動画終了時：弾幕を停止
+              clearAllDanmaku(inst);
             }
           }
         }
@@ -407,7 +417,6 @@
     inst.currentTrackIndex = newTrackIdx;
     inst.currentLoop = 1;
 
-    // 🌟 曲が変わったら前曲の残像弾幕を完全消去！
     clearAllDanmaku(inst);
 
     const targetTrack = tracks[newTrackIdx];
