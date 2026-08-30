@@ -51,7 +51,8 @@
           startSec: parseTimeToSeconds(t.time),
           currentCount: t.repeatCount,
           speed: t.speed !== undefined ? parseFloat(t.speed) : 1.0,
-          filter: t.filter || "none"
+          filter: t.filter || "none",
+          comments: t.comments || []
         }));
         for (let i = 0; i < vid.parsedTracks.length; i++) {
           vid.parsedTracks[i].endSec = (i < vid.parsedTracks.length - 1) ? vid.parsedTracks[i + 1].startSec : Infinity;
@@ -65,7 +66,8 @@
         player: null,
         timer: null,
         currentTrackIndex: -1,
-        currentLoop: 1
+        currentLoop: 1,
+        commentInterval: null
       };
 
       instances.push(instance);
@@ -87,6 +89,8 @@
         <div class="yts-player-wrapper">
           <div class="yts-embed-responsive" id="yts-embed-${appIndex}">
             <div id="yts-yt-player-${appIndex}"></div>
+            <!-- 🌟 弾幕表示用レイヤー -->
+            <div class="yts-danmaku-stage" id="yts-danmaku-${appIndex}"></div>
           </div>
         </div>
         <div class="yts-controls">
@@ -98,7 +102,13 @@
             <option value="bw">📷 昭和白黒</option>
             <option value="sepia">📜 昭和セピア</option>
             <option value="film">🎞️ 8mmフィルム</option>
+            <option value="bw-flip">🙃 白黒(逆さま)</option>
           </select>
+        </div>
+        <!-- 🌟 リアルタイム弾幕投稿フォーム -->
+        <div class="yts-comment-form">
+          <input type="text" id="yts-comment-input-${appIndex}" placeholder="コメント（弾幕）を入力..." />
+          <button class="yts-btn" id="yts-comment-btn-${appIndex}">送信</button>
         </div>
         <table class="yts-table">
           <thead>
@@ -179,7 +189,7 @@
     const embedWrapper = document.getElementById(`yts-embed-${inst.appIndex}`);
     const filterSelect = document.getElementById(`yts-select-filter-${inst.appIndex}`);
     if (embedWrapper) {
-      embedWrapper.classList.remove('yts-filter-bw', 'yts-filter-sepia', 'yts-filter-film');
+      embedWrapper.classList.remove('yts-filter-bw', 'yts-filter-sepia', 'yts-filter-film', 'yts-filter-bw-flip');
       if (filterValue !== 'none') {
         embedWrapper.classList.add(`yts-filter-${filterValue}`);
       }
@@ -187,6 +197,43 @@
     if (filterSelect) {
       filterSelect.value = filterValue;
     }
+  }
+
+  // 🌟 画面に文字（弾幕）を一発流す関数
+  function shootDanmaku(inst, text) {
+    const stage = document.getElementById(`yts-danmaku-${inst.appIndex}`);
+    if (!stage || !text) return;
+
+    const span = document.createElement('span');
+    span.className = 'yts-bullet';
+    span.textContent = text;
+
+    // 上下の位置を 5% 〜 85% の間でランダム指定
+    const topPos = Math.floor(Math.random() * 80) + 5;
+    span.style.top = topPos + '%';
+
+    // 流れる速度を 3〜5秒の間でランダム指定
+    const duration = (Math.random() * 2 + 3).toFixed(1);
+    span.style.animationDuration = `${duration}s`;
+
+    stage.appendChild(span);
+
+    // アニメーション終了後に自動で要素削除
+    setTimeout(() => {
+      if (span.parentNode) span.parentNode.removeChild(span);
+    }, duration * 1000);
+  }
+
+  // 🌟 トラック固有の自動弾幕タイマーをセット
+  function startDanmakuLoop(inst, comments) {
+    if (inst.commentInterval) clearInterval(inst.commentInterval);
+    if (!comments || comments.length === 0) return;
+
+    // 0.4秒ごとにランダムなコメントを流す
+    inst.commentInterval = setInterval(() => {
+      const randomText = comments[Math.floor(Math.random() * comments.length)];
+      shootDanmaku(inst, randomText);
+    }, 400);
   }
 
   function renderTable(inst) {
@@ -260,6 +307,22 @@
         applyFilterUI(inst, e.target.value);
       });
     }
+
+    // 🌟 弾幕送信フォームイベント
+    const input = document.getElementById(`yts-comment-input-${inst.appIndex}`);
+    const btn = document.getElementById(`yts-comment-btn-${inst.appIndex}`);
+    const sendFn = () => {
+      if (input && input.value.trim() !== '') {
+        shootDanmaku(inst, input.value.trim());
+        input.value = '';
+      }
+    };
+    if (btn) btn.addEventListener('click', sendFn);
+    if (input) {
+      input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendFn();
+      });
+    }
   }
 
   window.onYouTubeIframeAPIReady = function() {
@@ -310,7 +373,6 @@
         return;
       }
 
-      // 🌟 1秒刻みのタイマーカウントアップ表示をリアルタイム更新
       const activeTimeDisp = document.getElementById(`yts-time-disp-${inst.appIndex}-${currentTrack.index}`);
       if (activeTimeDisp) {
         activeTimeDisp.textContent = formatSecondsToTime(currentTime);
@@ -337,7 +399,6 @@
   }
 
   function onTrackChange(inst, newTrackIdx) {
-    // 直前トラックの表示時間を初期値に復元
     const tracks = getCurrentTracks(inst);
     if (inst.currentTrackIndex !== -1 && tracks[inst.currentTrackIndex]) {
       const prevTrack = tracks[inst.currentTrackIndex];
@@ -350,14 +411,14 @@
 
     const targetTrack = tracks[newTrackIdx];
     if (targetTrack) {
-      // 🌟 トラック固有の再生速度をセット
       if (inst.player && typeof inst.player.setPlaybackRate === 'function') {
         inst.player.setPlaybackRate(targetTrack.speed);
       }
-      // 🌟 トラック固有のフィルターをセット
       if (targetTrack.filter) {
         applyFilterUI(inst, targetTrack.filter);
       }
+      // 🌟 弾幕自動生成の開始
+      startDanmakuLoop(inst, targetTrack.comments);
     }
 
     updateRowHighlights(inst);
@@ -423,7 +484,6 @@
         if (loopCell) {
           loopCell.textContent = '-';
         }
-        // 非アクティブな行は本来の開始タイムに復元
         if (timeDisp) {
           timeDisp.textContent = t.time;
         }

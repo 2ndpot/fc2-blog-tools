@@ -1,14 +1,12 @@
 /* ==================================================
-   YouTube Skipper - Retro Standard Edition
+   YouTube Skipper - Retro & Danmaku Edition
    ================================================== */
 
-/* アプリ全体 */
 .yts-app {
   max-width: 100%;
   font-family: sans-serif;
 }
 
-/* プレイヤー枠（レスポンシブ 16:9） */
 .yts-player-wrapper {
   margin-bottom: 12px;
 }
@@ -30,7 +28,39 @@
   height: 100%;
 }
 
-/* プレイリストナビゲーションバー */
+/* 🌟 ニコニコ風・弾幕ステージ 🌟 */
+.yts-danmaku-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* 動画クリックの邪魔をしない */
+  z-index: 10;
+  overflow: hidden;
+}
+
+/* 流れる文字のスタイル */
+.yts-bullet {
+  position: absolute;
+  white-space: nowrap;
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+  animation: yts-danmaku-fly linear forwards;
+}
+
+@keyframes yts-danmaku-fly {
+  from {
+    transform: translateX(100vw); /* 画面右端の外から */
+  }
+  to {
+    transform: translateX(-100%); /* 画面左端の外へ */
+  }
+}
+
+/* ナビゲーション・操作バー */
 .yts-playlist-nav {
   display: flex;
   align-items: center;
@@ -57,13 +87,27 @@
   white-space: nowrap;
 }
 
-/* 操作ボタン群 */
 .yts-controls {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+  margin-bottom: 8px;
+}
+
+/* 弾幕入力フォーム */
+.yts-comment-form {
+  display: flex;
+  gap: 6px;
   margin-bottom: 12px;
+}
+
+.yts-comment-form input {
+  flex-grow: 1;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 .yts-btn {
@@ -81,14 +125,13 @@
 .yts-btn-danger { background: #dc3545; color: #fff; border-color: #bd2130; }
 .yts-btn-danger:hover { background: #bd2130; }
 
-/* フィルター選択セレクトボックス */
 .yts-filter-select {
   margin-left: auto;
   border-color: #aaa;
   background-color: #fff8f0;
 }
 
-/* トラックテーブル */
+/* テーブルスタイル */
 .yts-table {
   width: 100%;
   border-collapse: collapse;
@@ -107,7 +150,6 @@
   border-bottom: 2px solid #ddd;
 }
 
-/* タイム表示スタイル */
 .yts-time-link {
   color: #007bff;
   cursor: pointer;
@@ -115,66 +157,31 @@
   font-weight: bold;
 }
 
-.yts-time-link:hover {
-  color: #0056b3;
-}
+.yts-time-link:hover { color: #0056b3; }
+.yts-time-text { color: #888; }
+.yts-loop-cell { font-weight: bold; }
+.yts-select { padding: 2px 4px; }
 
-.yts-time-text {
-  color: #888;
-}
+.yts-track-row { transition: background-color 0.2s, opacity 0.2s; }
+.yts-track-row.active { background-color: #e3f2fd; font-weight: bold; }
+.yts-track-row.disabled { opacity: 0.4; color: #888; }
 
-/* n周目カウンター */
-.yts-loop-cell {
-  font-weight: bold;
-}
-
-.yts-select {
-  padding: 2px 4px;
-}
-
-/* 行ハイライト状態演出 */
-.yts-track-row {
-  transition: background-color 0.2s, opacity 0.2s;
-}
-
-.yts-track-row.active {
-  background-color: #e3f2fd;
-  font-weight: bold;
-}
-
-.yts-track-row.disabled {
-  opacity: 0.4;
-  color: #888;
-}
-
-/* --- 昭和レトロフィルター演出 --- */
-/* 昭和白黒 */
-.yts-filter-bw iframe {
-  filter: grayscale(100%) contrast(120%);
-}
-
-/* 昭和セピア */
-.yts-filter-sepia iframe {
-  filter: sepia(85%) contrast(110%) brightness(90%);
-}
-
-/* 8mmフィルム（チラチラ感 ＋ 微細揺れ） */
+/* 昭和レトロ ＆ 上下逆さまフィルター */
+.yts-filter-bw iframe { filter: grayscale(100%) contrast(120%); }
+.yts-filter-sepia iframe { filter: sepia(85%) contrast(110%) brightness(90%); }
 .yts-filter-film iframe {
   filter: sepia(65%) contrast(135%) brightness(88%);
   animation: yts-film-flicker 0.12s infinite alternate;
 }
 
+/* 🌟 昭和白黒 ＋ 上下逆さま 🌟 */
+.yts-filter-bw-flip iframe {
+  filter: grayscale(100%) contrast(120%);
+  transform: rotate(180deg);
+}
+
 @keyframes yts-film-flicker {
-  0% {
-    opacity: 0.92;
-    transform: scale(1) translate(0, 0);
-  }
-  50% {
-    opacity: 0.98;
-    transform: scale(1.002) translate(-0.5px, 0.5px);
-  }
-  100% {
-    opacity: 0.88;
-    transform: scale(1) translate(0.5px, -0.5px);
-  }
+  0% { opacity: 0.92; transform: scale(1) translate(0, 0); }
+  50% { opacity: 0.98; transform: scale(1.002) translate(-0.5px, 0.5px); }
+  100% { opacity: 0.88; transform: scale(1) translate(0.5px, -0.5px); }
 }
