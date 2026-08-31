@@ -145,14 +145,12 @@
 
 .yts-table th {
   background-color: #f5f5f5;
-  border-bottom: 2px solid #ddd;
+  border-bottom: 1px solid #ddd;
 }
 
 .yts-time-link {
-  color: #007bff;
   cursor: pointer;
   text-decoration: underline;
-  font-weight: bold;
 }
 
 .yts-time-link:hover { color: #0056b3; }
