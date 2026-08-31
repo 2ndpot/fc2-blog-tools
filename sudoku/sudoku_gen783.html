@@ -558,13 +558,32 @@ import { analyzeNextStep } from './js/logic/solver.js';
   });
   
   document.getElementById("btn-clear").addEventListener("click", () => {
-    if (!confirm("すべての入力データ、検証ログ、出力JSONをリセットしますか？")) return;
-    elTitle.value = new Date().toISOString().split('T')[0];
-    elInit.value = ""; elCurr.value = ""; elOut.value = "";
-    setupEngine();
-    elLog.innerHTML = "";
-    writeLog("システムをリセットしました。", "info");
-  });
+      if (!confirm("すべての入力データ、検証ログ、出力JSONをリセットしますか？")) return;
+
+      // 入力欄・ログをクリア
+      elTitle.value = new Date().toISOString().split('T')[0];
+      elInit.value = ""; 
+      elCurr.value = ""; 
+      elOut.value = "";
+      elLog.innerHTML = "";
+
+      // 内部状態・盤面データを完全に初期化
+      memoryGrid = [];
+      historyStack = [];
+      clearHighlights();
+      btnPrev.disabled = true;
+      btnNext.disabled = true;
+      showCand = false;
+      isCandidateInitialized = false;
+      nextPhase = "preview";
+      currentMove = null;
+
+      // 盤面とSVGオーバーレイを空にする
+      elGrid.innerHTML = "";
+      elSvg.innerHTML = "";
+
+      writeLog("システムおよび盤面をリセットしました。", "info");
+    });
 
   initDigitButtons();
   setupEngine();
