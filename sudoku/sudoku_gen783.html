@@ -69,8 +69,12 @@
     .btn-deck-ff:hover { background: #0277bd; }
     .btn-deck:disabled { background: #e0e0e0 !important; color: #aaa !important; border-color: #ccc !important; cursor: not-allowed; }
 
-    .btn-blue { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-group-row { display: flex; gap: 8px; margin-top: 5px; }
+    .btn-blue { flex: 1; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
     .btn-blue:hover { background: #0056b3; }
+    .btn-orange { flex: 1; padding: 10px; background: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-orange:hover { background: #e0690b; }
+    
     .btn-green { padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
     .btn-green:hover { background: #218838; }
     .btn-tgl { padding: 6px 12px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer; }
@@ -97,7 +101,7 @@
     .log-bug    { color: #ff7043; padding-left: 8px; }
     .log-manual { color: #e91e63; padding-left: 8px; font-weight: bold; }
     
-    textarea { width: 100%; height: 65px; font-family: monospace; font-size: 0.82rem; padding: 6px; box-sizing: border-box; resize: none; background: #f8f9fa; margin-top: 5px; }
+    textarea { width: 100%; height: 90px; font-family: monospace; font-size: 0.82rem; padding: 6px; box-sizing: border-box; resize: none; background: #f8f9fa; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -129,14 +133,18 @@
     <button class="btn-tgl" id="btn-clear" style="width: 100%; margin-bottom: 12px; background: #e0e0e0; color: #333; border: 1px solid #ccc;">全入力をクリア</button>
     
     <div class="form-group">
-      <label>1. 初期問題グリッド (81桁)</label>
+      <label>1. 初期グリッド (81桁)</label>
       <input type="text" id="in-init" value="000001000073086400000000031009100005700040000006000090000530260294000000000000007">
     </div>
     <div class="form-group">
-      <label>2. 途中・現在グリッド (81桁)</label>
-      <input type="text" id="in-curr" value="000001000073086400000000031009100005700040000006000090000530260294000000000000007">
+      <label>2. 途中グリッド (81桁)</label>
+      <input type="text" id="in-curr" value="">
     </div>
-    <button class="btn-blue" id="btn-init-engine">盤面を読み込む</button>
+    
+    <div class="btn-group-row">
+      <button class="btn-blue" id="btn-init-engine">盤面を生成</button>
+      <button class="btn-orange" id="btn-get-curr">途中グリッドを取得</button>
+    </div>
 
     <div class="form-group" style="margin-top: 15px; background: #f0f4f8; padding: 10px; border-radius: 6px; border: 1px solid #d0d7de;">
       <label>🔗 数字強調 & 共役対（強鎖）フィルター</label>
@@ -165,17 +173,17 @@ import { analyzeNextStep } from './js/logic/solver.js';
   let historyStack = [];
   let highlights = { blueCells: [], blueCands: [], redCands: [], chainLinks: [] };
 
-  const elTitle  = document.getElementById("in-title");
-  const elInit   = document.getElementById("in-init");
-  const elCurr   = document.getElementById("in-curr");
-  const elGrid   = document.getElementById("grid");
-  const elSvg    = document.getElementById("svg-overlay");
-  const elLog    = document.getElementById("log");
-  const elOut    = document.getElementById("out-json");
-  const btnNext  = document.getElementById("btn-next");
-  const btnPrev  = document.getElementById("btn-prev");
+  const elTitle   = document.getElementById("in-title");
+  const elInit    = document.getElementById("in-init");
+  const elCurr    = document.getElementById("in-curr");
+  const elGrid    = document.getElementById("grid");
+  const elSvg     = document.getElementById("svg-overlay");
+  const elLog     = document.getElementById("log");
+  const elOut     = document.getElementById("out-json");
+  const btnNext   = document.getElementById("btn-next");
+  const btnPrev   = document.getElementById("btn-prev");
+  const btnGetCurr = document.getElementById("btn-get-curr");
 
-  // プロパティアクセス安全化ヘルパー
   const getR = (obj) => obj.cell ? obj.cell.row : obj.row;
   const getC = (obj) => obj.cell ? obj.cell.col : obj.col;
 
@@ -230,7 +238,6 @@ import { analyzeNextStep } from './js/logic/solver.js';
     return { weakCells: Array.from(weakSet), strongCells: Array.from(strongSet) };
   }
 
-  // 例外によるクラッシュを完全に防ぐセーフティ付き pushHistory
   function pushHistory() {
     try {
       const state = {
@@ -238,7 +245,7 @@ import { analyzeNextStep } from './js/logic/solver.js';
         showCand: showCand,
         isCandidateInitialized: isCandidateInitialized,
         nextPhase: nextPhase,
-        currentMove: currentMove, // 循環参照エラー防止のためシャローコピーで保持
+        currentMove: currentMove,
         highlights: {
           blueCellsCoords: (highlights.blueCells || []).map(c => ({ row: c.row, col: c.col })),
           blueCandsCoords: (highlights.blueCands || []).map(h => ({ row: getR(h), col: getC(h), num: h.num })),
@@ -251,7 +258,7 @@ import { analyzeNextStep } from './js/logic/solver.js';
       historyStack.push(state);
       btnPrev.disabled = false;
     } catch(e) {
-      console.error("履歴の保存に失敗しました（無視して続行します）:", e);
+      console.error("履歴の保存に失敗しました:", e);
     }
   }
 
@@ -392,7 +399,6 @@ import { analyzeNextStep } from './js/logic/solver.js';
             n.title = `クリックで R${c.row+1}C${c.col+1} から「${i}」を手動削除`;
             n.addEventListener("click", (e) => { e.stopPropagation(); removeCandidateManually(c, i); });
 
-            // プロパティアクセスの安全化（h.cellが無くてもh.rowで判定可能に）
             const isBlue = highlights.blueCands.some(h => getR(h) === c.row && getC(h) === c.col && h.num === i);
             const isRed  = highlights.redCands.some(h => getR(h) === c.row && getC(h) === c.col && h.num === i);
 
@@ -410,8 +416,22 @@ import { analyzeNextStep } from './js/logic/solver.js';
       elGrid.appendChild(el);
     });
     renderOverlayLines();
-    const outStr = memoryGrid.map(c => c.status === "candidate" ? 0 : c.val).join('');
-    elOut.value = JSON.stringify({ title: elTitle.value, grid: outStr }, null, 2);
+
+    // JSON出力生成（grid1: 初期, grid2: 途中）
+    const grid1Str = elInit.value.trim();
+    const grid2Str = elCurr.value.trim();
+    
+    // 途中グリッドが設定されている場合のみJSONを更新・生成する
+    if (grid2Str !== "") {
+      const jsonObj = {
+        title: elTitle.value,
+        grid1: grid1Str,
+        grid2: grid2Str
+      };
+      elOut.value = JSON.stringify(jsonObj, null, 2);
+    } else {
+      elOut.value = "";
+    }
   }
 
   function setupEngine() {
@@ -426,26 +446,33 @@ import { analyzeNextStep } from './js/logic/solver.js';
     currentMove = null;
 
     const sInit = elInit.value.trim();
-    let sCurr = elCurr.value.trim();
-    if (sCurr === "") {
-      sCurr = sInit;
-      elCurr.value = sInit;
-      writeLog(">> 途中・現在グリッドが空白のため、初期問題を自動コピーしました。", "info");
-    }
 
-    if (!checkValid(sInit, "初期データ") || !checkValid(sCurr, "途中データ")) return;
+    // 初期グリッドのみバリデーションチェック
+    if (!checkValid(sInit, "初期グリッド")) return;
 
+    // 初期データから盤面生成
     memoryGrid = sInit.split('').map((v, i) => {
-      const vi = parseInt(v, 10), vc = parseInt(sCurr[i], 10), r = Math.floor(i / 9), c = i % 9, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+      const vi = parseInt(v, 10), r = Math.floor(i / 9), c = i % 9, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
       if (vi !== 0) return { val: vi, status: "given", row: r, col: c, box: b, err: false };
-      if (vc !== 0) return { val: vc, status: "solved", row: r, col: c, box: b, err: false };
       return { val: [], status: "candidate", row: r, col: c, box: b, err: false };
     });
 
     if (checkDup(memoryGrid)) { render(); elOut.value = "エラーのため出力不可"; return; }
     
     initCandidates(memoryGrid);
-    writeLog("盤面を読み込みました。", "ok");
+    writeLog("盤面を生成しました。", "ok");
+    render();
+  }
+
+  // 「途中グリッドを取得」処理
+  function fetchCurrentGrid() {
+    if (memoryGrid.length === 0) {
+      alert("先に「盤面を生成」を行ってください。");
+      return;
+    }
+    const currentStr = memoryGrid.map(c => c.status === "candidate" ? 0 : c.val).join('');
+    elCurr.value = currentStr;
+    writeLog("現在の盤面（ヒント＋確定数字）を「2. 途中グリッド」に取り込みました。", "info");
     render();
   }
 
@@ -465,7 +492,6 @@ import { analyzeNextStep } from './js/logic/solver.js';
       clearHighlights();
       let move;
       
-      // カスタムロジック側での予期せぬエラーをキャッチし、UIフリーズを回避
       try {
         move = analyzeNextStep(memoryGrid);
       } catch (e) {
@@ -533,57 +559,57 @@ import { analyzeNextStep } from './js/logic/solver.js';
 
   window.addEventListener("resize", renderOverlayLines);
   document.getElementById("btn-init-engine").addEventListener("click", setupEngine);
+  btnGetCurr.addEventListener("click", fetchCurrentGrid);
   btnNext.addEventListener("click", stepForward);
   btnPrev.addEventListener("click", stepBack);
 
   document.getElementById("btn-auto").addEventListener("click", () => {
-      // 暴走防止用に最大ループ回数を設定（確定＋削除の2フェーズ対応で200に拡張）
-      let safetyCounter = 0;
-      while (!btnNext.disabled && safetyCounter < 200) {
-        stepForward();
-        safetyCounter++;
-      }
+    let safetyCounter = 0;
+    while (!btnNext.disabled && safetyCounter < 200) {
+      stepForward();
+      safetyCounter++;
+    }
 
-      // 奇数回で止まって「ハイライト表示（execute待ち）」で終わっていた場合、最後の書き込みまで完了させる
-      if (nextPhase === "execute" && !btnNext.disabled) {
-        stepForward();
-      }
+    if (nextPhase === "execute" && !btnNext.disabled) {
+      stepForward();
+    }
 
-      if (safetyCounter >= 200) console.warn("安全装置が作動し自動進行を停止しました");
-    });
+    if (safetyCounter >= 200) console.warn("安全装置が作動し自動進行を停止しました");
+  });
 
   document.getElementById("btn-reset").addEventListener("click", setupEngine);
   document.getElementById("btn-copy").addEventListener("click", () => { 
+    if (elOut.value === "") {
+      alert("JSON出力がまだ生成されていません。「途中グリッドを取得」を実行してください。");
+      return;
+    }
     elOut.select(); document.execCommand("copy"); alert("JSONをコピーしました！"); 
   });
   
   document.getElementById("btn-clear").addEventListener("click", () => {
-      if (!confirm("すべての入力データ、検証ログ、出力JSONをリセットしますか？")) return;
+    if (!confirm("すべての入力データ、検証ログ、出力JSONをリセットしますか？")) return;
+    
+    elTitle.value = new Date().toISOString().split('T')[0];
+    elInit.value = ""; 
+    elCurr.value = ""; 
+    elOut.value = "";
+    elLog.innerHTML = "";
 
-      // 入力欄・ログをクリア
-      elTitle.value = new Date().toISOString().split('T')[0];
-      elInit.value = ""; 
-      elCurr.value = ""; 
-      elOut.value = "";
-      elLog.innerHTML = "";
+    memoryGrid = [];
+    historyStack = [];
+    clearHighlights();
+    btnPrev.disabled = true;
+    btnNext.disabled = true;
+    showCand = false;
+    isCandidateInitialized = false;
+    nextPhase = "preview";
+    currentMove = null;
 
-      // 内部状態・盤面データを完全に初期化
-      memoryGrid = [];
-      historyStack = [];
-      clearHighlights();
-      btnPrev.disabled = true;
-      btnNext.disabled = true;
-      showCand = false;
-      isCandidateInitialized = false;
-      nextPhase = "preview";
-      currentMove = null;
+    elGrid.innerHTML = "";
+    elSvg.innerHTML = "";
 
-      // 盤面とSVGオーバーレイを空にする
-      elGrid.innerHTML = "";
-      elSvg.innerHTML = "";
-
-      writeLog("システムおよび盤面をリセットしました。", "info");
-    });
+    writeLog("システムおよび盤面をリセットしました。", "info");
+  });
 
   initDigitButtons();
   setupEngine();
