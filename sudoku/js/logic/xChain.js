@@ -1,82 +1,91 @@
 /**
- * 連鎖手筋: X-Chain (js/logic/xChain.js)
+ * X-Chain 検出モジュール (js/logic/xChain.js)
  */
 
-/**
- * X-Chain（共役対・Strong Link 接続）の検出
- */
 export function findXChain(grid) {
   for (let num = 1; num <= 9; num++) {
-    const strongLinks = [];
+    const candCells = grid.filter(c => c.status === "candidate" && c.val.includes(num));
+    if (candCells.length < 4) continue;
 
-    // 各ハウス（行・列・ブロック）における Strong Link（共役対）を特定
-    for (const houseType of ["row", "col", "box"]) {
-      for (let hIdx = 0; hIdx < 9; hIdx++) {
-        const cells = grid.filter(c => c.status === "candidate" && c[houseType] === hIdx && c.val.includes(num));
-        if (cells.length === 2) {
-          strongLinks.push({ c1: cells[0], c2: cells[1] });
+    // 1. 強鎖（Strong Link）の全検出（同じ行・列・ブロック内に候補が2つだけ）
+    const strongLinks = [];
+    ["row", "col", "box"].forEach(houseType => {
+      for (let i = 0; i < 9; i++) {
+        const house = candCells.filter(c => c[houseType] === i);
+        if (house.length === 2) {
+          strongLinks.push({ from: house[0], to: house[1] });
+          strongLinks.push({ from: house[1], to: house[0] });
         }
       }
-    }
+    });
 
     if (strongLinks.length === 0) continue;
 
-    // 隣接リスト（グラフ）の構築
-    const graph = new Map();
-    grid.forEach(c => graph.set(c, []));
-    strongLinks.forEach(link => {
-      graph.get(link.c1).push(link.c2);
-      graph.get(link.c2).push(link.c1);
-    });
+    // 2. 各候補セルを始点として奇数個リンク（強→弱→強...→強）の連鎖を探索
+    for (const startCell of candCells) {
+      // キューの要素: { current, path, lastLink }
+      const queue = [{ current: startCell, path: [startCell], lastLink: null }];
 
-    const startNodes = Array.from(graph.keys()).filter(c => graph.get(c).length > 0);
-
-    for (const startNode of startNodes) {
-      // 奇数長（奇数個のエッジ＝奇数個の Strong Link）のパスを探索
-      const queue = [[startNode]];
-      
       while (queue.length > 0) {
-        const path = queue.shift();
-        const lastNode = path[path.length - 1];
+        const { current, path, lastLink } = queue.shift();
 
-        // 偶数個のノード＝奇数個のリンク（Strong Linkで始まるChain）
-        if (path.length >= 4 && path.length % 2 === 0) {
-          const endNode = lastNode;
+        // リンク数が奇数（ノード数 path.length が偶数 ≧ 4）で、最後が「強鎖」の場合に判定
+        if (path.length >= 4 && path.length % 2 === 0 && lastLink === "strong") {
+          const endCell = current;
 
-          // 始点と終点の両方を見込める共通のマス（Intersection）を検索
-          const redCands = [];
-          grid.forEach(c => {
-            if (c.status === "candidate" && c !== startNode && c !== endNode && c.val.includes(num)) {
-              const seesStart = (c.row === startNode.row || c.col === startNode.col || c.box === startNode.box);
-              const seesEnd = (c.row === endNode.row || c.col === endNode.col || c.box === endNode.box);
-              if (seesStart && seesEnd) {
-                redCands.push({ cell: c, num: num, row: c.row, col: c.col });
-              }
-            }
+          // 始点と終点から同時につき合わさる（交差する）消去対象セルを特定
+          const targetCells = candCells.filter(c => {
+            if (c === startCell || c === endCell || path.includes(c)) return false;
+            const seesStart = (c.row === startCell.row || c.col === startCell.col || c.box === startCell.box);
+            const seesEnd   = (c.row === endCell.row || c.col === endCell.col || c.box === endCell.box);
+            return seesStart && seesEnd;
           });
 
-          if (redCands.length > 0) {
-            const blueCands = path.map(c => ({ cell: c, num: num }));
-            const chainPathStr = path.map(c => `R${c.row+1}C${c.col+1}`).join(' = ');
+          if (targetCells.length > 0) {
+            // 描画用のリンクデータ生成
+            const chainLinks = [];
+            for (let i = 0; i < path.length - 1; i++) {
+              chainLinks.push({
+                from: { row: path[i].row, col: path[i].col },
+                to:   { row: path[i+1].row, col: path[i+1].col },
+                type: (i % 2 === 0) ? "strong" : "weak",
+                num: num
+              });
+            }
 
             return {
-              type: "clean",
-              blueCells: path,
-              blueCands: blueCands,
-              redCands: redCands,
-              chainPath: path,
-              chainNum: num,
-              logMsg: `🔗 [X-Chain] 数字「${num}」の強リンク連鎖 (${chainPathStr}) を発見。両端を見込むマスから数字「${num}」を削除できます。`,
-              logClass: "chain"
+              name: "X-Chain",
+              num: num,
+              blueCells: [startCell, endCell],
+              blueCands: path.map(c => ({ cell: c, num: num, row: c.row, col: c.col })),
+              redCands: targetCells.map(c => ({ cell: c, num: num, row: c.row, col: c.col })),
+              chainLinks: chainLinks,
+              logMsg: `🔗 [X-Chain] 数字[${num}] : R${startCell.row+1}C${startCell.col+1} から R${endCell.row+1}C${endCell.col+1} への連鎖により、${targetCells.map(c=>`R${c.row+1}C${c.col+1}`).join(', ')} から[${num}]を除外できます。`,
+              logClass: "xchain"
             };
           }
         }
 
-        // 次のノードへの伸長（重複防止）
-        const neighbors = graph.get(lastNode) || [];
-        for (const nextNode of neighbors) {
-          if (!path.includes(nextNode)) {
-            queue.push([...path, nextNode]);
+        // 無限ループ防止（最大8マスまで探索）
+        if (path.length >= 8) continue;
+
+        // 展開処理
+        if (lastLink === null || lastLink === "weak") {
+          // 次は「強鎖」で繋がるセルへ
+          const nextStrongs = strongLinks.filter(l => l.from === current && !path.includes(l.to));
+          for (const l of nextStrongs) {
+            queue.push({ current: l.to, path: [...path, l.to], lastLink: "strong" });
+          }
+        } 
+        
+        if (lastLink === "strong") {
+          // 次は「弱鎖」で繋がるセルへ（同じ行・列・ブロック内の同数字候補）
+          const nextWeaks = candCells.filter(c => 
+            c !== current && !path.includes(c) &&
+            (c.row === current.row || c.col === current.col || c.box === current.box)
+          );
+          for (const nextCell of nextWeaks) {
+            queue.push({ current: nextCell, path: [...path, nextCell], lastLink: "weak" });
           }
         }
       }
