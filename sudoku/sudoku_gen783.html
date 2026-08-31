@@ -537,14 +537,20 @@ import { analyzeNextStep } from './js/logic/solver.js';
   btnPrev.addEventListener("click", stepBack);
 
   document.getElementById("btn-auto").addEventListener("click", () => {
-    // 暴走防止用に最大ループ回数を設定
-    let safetyCounter = 0;
-    while (!btnNext.disabled && safetyCounter < 100) {
-      stepForward();
-      safetyCounter++;
-    }
-    if(safetyCounter >= 100) console.warn("安全装置が作動し自動進行を停止しました");
-  });
+      // 暴走防止用に最大ループ回数を設定（確定＋削除の2フェーズ対応で200に拡張）
+      let safetyCounter = 0;
+      while (!btnNext.disabled && safetyCounter < 200) {
+        stepForward();
+        safetyCounter++;
+      }
+
+      // 奇数回で止まって「ハイライト表示（execute待ち）」で終わっていた場合、最後の書き込みまで完了させる
+      if (nextPhase === "execute" && !btnNext.disabled) {
+        stepForward();
+      }
+
+      if (safetyCounter >= 200) console.warn("安全装置が作動し自動進行を停止しました");
+    });
 
   document.getElementById("btn-reset").addEventListener("click", setupEngine);
   document.getElementById("btn-copy").addEventListener("click", () => { 
