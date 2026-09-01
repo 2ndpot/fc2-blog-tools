@@ -137,7 +137,7 @@
 }
 
 .yts-table th, .yts-table td {
-  padding: 6px 8px;
+  padding: 0 0 2px;
   font-size: 0.9rem;
   text-align: left;
   vertical-align: middle;
