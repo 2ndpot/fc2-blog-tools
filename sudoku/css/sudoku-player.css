@@ -153,3 +153,9 @@
 .log-err    { color: #f44336; }
 .log-ok     { color: #4ec9b0; padding-left: 8px; }
 .log-info   { color: #858585; padding-left: 8px; }
+
+/* ログ用ハイライト */
+.log-manual { color: #ffb74d; } /* 手動介入：オレンジ */
+.log-single { color: #81c784; }                    /* 単一候補・隠れた単一：緑 */
+.log-chain  { color: #ba68c8; }                    /* X-Chain系：紫 */
+.log-lock   { color: #4dd0e1; }                    /* Locked Candidate系：水色 */
