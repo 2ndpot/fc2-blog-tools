@@ -67,7 +67,8 @@
         timer: null,
         currentTrackIndex: -1,
         currentLoop: 1,
-        commentInterval: null
+        commentInterval: null,
+        isPlaying: false
       };
 
       instances.push(instance);
@@ -163,6 +164,7 @@
     inst.currentVideoIndex = newVideoIdx;
     inst.currentTrackIndex = -1;
     inst.currentLoop = 1;
+    inst.isPlaying = false;
 
     const select = document.getElementById(`yts-select-vid-${inst.appIndex}`);
     if (select) select.value = newVideoIdx;
@@ -201,6 +203,9 @@
   }
 
   function shootDanmaku(inst, text) {
+    // 再生中でない場合は弾幕を流さない
+    if (!inst.isPlaying) return;
+
     const stage = document.getElementById(`yts-danmaku-${inst.appIndex}`);
     if (!stage || !text) return;
 
@@ -222,22 +227,46 @@
   }
 
   function clearAllDanmaku(inst) {
-    if (inst.commentInterval) {
-      clearInterval(inst.commentInterval);
-      inst.commentInterval = null;
-    }
+    stopDanmakuLoop(inst);
     const stage = document.getElementById(`yts-danmaku-${inst.appIndex}`);
     if (stage) stage.innerHTML = '';
   }
 
+  function pauseDanmakuAnimation(inst) {
+    const stage = document.getElementById(`yts-danmaku-${inst.appIndex}`);
+    if (stage) {
+      stage.querySelectorAll('.yts-bullet').forEach(el => {
+        el.style.animationPlayState = 'paused';
+      });
+    }
+  }
+
+  function resumeDanmakuAnimation(inst) {
+    const stage = document.getElementById(`yts-danmaku-${inst.appIndex}`);
+    if (stage) {
+      stage.querySelectorAll('.yts-bullet').forEach(el => {
+        el.style.animationPlayState = 'running';
+      });
+    }
+  }
+
   function startDanmakuLoop(inst, comments) {
-    clearAllDanmaku(inst);
+    stopDanmakuLoop(inst);
     if (!comments || comments.length === 0) return;
 
     inst.commentInterval = setInterval(() => {
-      const randomText = comments[Math.floor(Math.random() * comments.length)];
-      shootDanmaku(inst, randomText);
+      if (inst.isPlaying) {
+        const randomText = comments[Math.floor(Math.random() * comments.length)];
+        shootDanmaku(inst, randomText);
+      }
     }, 400);
+  }
+
+  function stopDanmakuLoop(inst) {
+    if (inst.commentInterval) {
+      clearInterval(inst.commentInterval);
+      inst.commentInterval = null;
+    }
   }
 
   function renderTable(inst) {
@@ -339,6 +368,9 @@
           },
           'onStateChange': (e) => {
             if (e.data === YT.PlayerState.PLAYING) {
+              inst.isPlaying = true;
+              resumeDanmakuAnimation(inst);
+
               const tracks = getCurrentTracks(inst);
               if (inst.player && typeof inst.player.getDuration === 'function') {
                 const duration = inst.player.getDuration();
@@ -347,9 +379,13 @@
                 }
               }
               syncCurrentTrackIndex(inst);
-            }
-            // 🌟 シークバー操作等でYouTube動画が物理的に終了した場合のフォールバック
+            } 
+            else if (e.data === YT.PlayerState.PAUSED) {
+              inst.isPlaying = false;
+              pauseDanmakuAnimation(inst);
+            } 
             else if (e.data === YT.PlayerState.ENDED) {
+              inst.isPlaying = false;
               clearAllDanmaku(inst);
               if (inst.currentVideoIndex < inst.playlist.length - 1) {
                 switchVideo(inst, inst.currentVideoIndex + 1, true);
