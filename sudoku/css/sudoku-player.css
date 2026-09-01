@@ -154,8 +154,12 @@
 .log-ok     { color: #4ec9b0; padding-left: 8px; }
 .log-info   { color: #858585; padding-left: 8px; }
 
-/* ログ用ハイライト */
-.log-manual { color: #ffb74d; } /* 手動介入：オレンジ */
-.log-single { color: #81c784; }                    /* 単一候補・隠れた単一：緑 */
-.log-chain  { color: #ba68c8; }                    /* X-Chain系：紫 */
-.log-lock   { color: #4dd0e1; }                    /* Locked Candidate系：水色 */
+/* 解析ログ用テキストカラー（要素単位） */
+.log-manual { color: #ffb74d !important; } /* 手動介入：オレンジ */
+.log-single { color: #81c784 !important; } /* 単一候補・隠れた単一：緑 */
+.log-chain  { color: #ba68c8 !important; } /* X-Chain等：紫 */
+.log-lock   { color: #4dd0e1 !important; } /* Locked Candidate等：水色 */
+
+/* JS側から logClass として行全体にクラスが付与されている場合の対応 */
+.player-log .log-chain, .log .log-chain { color: #ba68c8 !important; }
+.player-log .log-lock,  .log .log-lock  { color: #4dd0e1 !important; }
