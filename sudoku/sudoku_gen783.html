@@ -3,106 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>数独ブログ生成・検証エンジン (Ver 7.83 Robust Edition)</title>
-  <style>
-    :root {
-      --border-main: #333; 
-      --border-inner: #ccc;
-      --bg-given: #e1f5fe; 
-      --bg-solved: #e8f5e9; 
-      --bg-err: #ffebee;
-      --text-given: #000; 
-      --text-solved: #2e7d32; 
-      --text-cand: #777;
-      
-      --hl-blue-bg: #e3f2fd;
-      --hl-blue-border: #2196f3;
-      --hl-red-bg: #ffebee;
-      --hl-red-text: #d32f2f;
-      
-      --cell-size: min(50px, 9vw);
-    }
-    body { font-family: sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }
-    
-    .layout { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 1100px; margin: 0 auto; }
-    @media (min-width: 800px) { 
-      .layout { grid-template-columns: 1fr 430px; } 
-    }
-    
-    .panel { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    h2, h3 { margin-top: 0; }
-    .form-group { margin-bottom: 12px; }
-    label { display: block; margin-bottom: 5px; font-size: 0.85rem; }
-    input[type="text"] { width: 100%; padding: 8px; font-family: monospace; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-    
-    .board-container { position: relative; width: 100%; max-width: calc(var(--cell-size) * 9); margin: 0 auto 15px; aspect-ratio: 1; }
-    .board { display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); border: 3px solid var(--border-main); width: 100%; height: 100%; box-sizing: border-box; background: #fff; }
-    .svg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-
-    .cell { border: 1px solid var(--border-inner); box-sizing: border-box; display: flex; align-items: center; justify-content: center; position: relative; transition: all 0.2s; }
-    .cell:nth-child(3n) { border-right: 2px solid var(--border-main); }
-    .cell:nth-child(9n) { border-right: none; }
-    .cell:nth-child(n+19):nth-child(-n+27), .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid var(--border-main); }
-    
-    .cell[data-status="given"] { background: var(--bg-given); color: var(--text-given); font-weight: bold; font-size: calc(var(--cell-size) * 0.5); }
-    .cell[data-status="solved"] { background: var(--bg-solved); color: var(--text-solved); font-weight: bold; font-size: calc(var(--cell-size) * 0.5); }
-    .cell[data-err="true"] { background: var(--bg-err) !important; outline: 2px solid #c62828; z-index: 1; }
-    .cell.hl-blue-cell { background: var(--hl-blue-bg) !important; outline: 3px solid var(--hl-blue-border); z-index: 2; }
-    
-    .cand-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); width: 100%; height: 100%; padding: 2px; box-sizing: border-box; }
-    .cand-num { display: flex; align-items: center; justify-content: center; font-size: calc(var(--cell-size) * 0.22); color: var(--text-cand); line-height: 1; border-radius: 2px; font-weight: bold; user-select: none; }
-    .cand-num.interactive { cursor: pointer; transition: background-color 0.1s, color 0.1s; }
-    .cand-num.interactive:hover { background-color: #ffcdd2 !important; color: #b71c1c !important; }
-    .cand-num.hl-blue { background: var(--hl-blue-border); color: #fff !important; }
-    .cand-num.hl-red  { background: var(--hl-red-bg); color: var(--hl-red-text) !important; outline: 1px solid var(--hl-red-text); font-weight: bold; }
-    .cand-num.hl-chain-weak   { background: #e0f7fa; color: #006064 !important; font-weight: bold; }
-    .cand-num.hl-chain-strong { background: #00bcd4; color: #fff !important; font-weight: bold; outline: 1px solid #006064; }
-
-    .step-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 15px; }
-    .btn-deck { width: 100%; padding: 10px 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-sizing: border-box; transition: background-color 0.2s; }
-    .btn-deck-reset { background: #e0e0e0; color: #333; }
-    .btn-deck-reset:hover { background: #d5d5d5; }
-    .btn-deck-prev { background: #6c757d; color: white; border-color: #5a6268; }
-    .btn-deck-prev:hover { background: #5a6268; }
-    .btn-deck-next { background: #ff9800; color: white; border-color: #f57c00; }
-    .btn-deck-next:hover { background: #f57c00; }
-    .btn-deck-ff { background: #0288d1; color: white; border-color: #0277bd; }
-    .btn-deck-ff:hover { background: #0277bd; }
-    .btn-deck:disabled { background: #e0e0e0 !important; color: #aaa !important; border-color: #ccc !important; cursor: not-allowed; }
-
-    .btn-group-row { display: flex; gap: 8px; margin-top: 5px; }
-    .btn-blue { flex: 1; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    .btn-blue:hover { background: #0056b3; }
-    .btn-orange { flex: 1; padding: 10px; background: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    .btn-orange:hover { background: #e0690b; }
-    
-    .btn-green { padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
-    .btn-green:hover { background: #218838; }
-    .btn-tgl { padding: 6px 12px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer; }
-    
-    .digit-btn-group { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
-    .btn-digit { flex: 1; min-width: 28px; padding: 6px 0; border: 1px solid #00838f; background: #e0f7fa; color: #006064; border-radius: 4px; cursor: pointer; }
-    .btn-digit:hover { background: #b2ebf2; }
-    .btn-digit.active { background: #0288d1; color: #fff; }
-    .btn-digit-clear { padding: 6px 8px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
-    .btn-digit-clear:hover { background: #f0f0f0; }
-
-    .log { background: #1e1e1e; color: #dee2e6; border-radius: 4px; height: 280px; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; }
-    .log-err    { color: #f44336; font-weight: bold; }
-    .log-ok     { color: #4ec9b0; padding-left: 8px; }
-    .log-info   { color: #858585; padding-left: 8px; }
-    .log-twin   { color: #ffb74d; padding-left: 8px; }
-    .log-htwin  { color: #b5cea8; padding-left: 8px; }
-    .log-locked { color: #9cdcfe; padding-left: 8px; }
-    .log-triple { color: #eec543; padding-left: 8px; }
-    .log-htriple{ color: #fcb9b2; padding-left: 8px; }
-    .log-quad   { color: #dcdcaa; padding-left: 8px; }
-    .log-hquad  { color: #c586c0; padding-left: 8px; }
-    .log-xchain { color: #ce93d8; padding-left: 8px; }
-    .log-bug    { color: #ff7043; padding-left: 8px; }
-    .log-manual { color: #e91e63; padding-left: 8px; font-weight: bold; }
-    
-    textarea { width: 100%; height: 90px; font-family: monospace; font-size: 0.82rem; padding: 6px; box-sizing: border-box; resize: none; background: #f8f9fa; margin-top: 5px; }
-  </style>
+  <link rel="stylesheet" href="https://2ndpot.github.io/fc2-blog-tools/sudoku/css/sudoku.css">
 </head>
 <body>
 
@@ -417,11 +318,9 @@ import { analyzeNextStep } from './js/logic/solver.js';
     });
     renderOverlayLines();
 
-    // JSON出力生成（grid1: 初期, grid2: 途中）
     const grid1Str = elInit.value.trim();
     const grid2Str = elCurr.value.trim();
     
-    // 途中グリッドが設定されている場合のみJSONを更新・生成する
     if (grid2Str !== "") {
       const jsonObj = {
         title: elTitle.value,
@@ -447,10 +346,8 @@ import { analyzeNextStep } from './js/logic/solver.js';
 
     const sInit = elInit.value.trim();
 
-    // 初期グリッドのみバリデーションチェック
     if (!checkValid(sInit, "初期グリッド")) return;
 
-    // 初期データから盤面生成
     memoryGrid = sInit.split('').map((v, i) => {
       const vi = parseInt(v, 10), r = Math.floor(i / 9), c = i % 9, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
       if (vi !== 0) return { val: vi, status: "given", row: r, col: c, box: b, err: false };
@@ -464,7 +361,6 @@ import { analyzeNextStep } from './js/logic/solver.js';
     render();
   }
 
-  // 「途中グリッドを取得」処理
   function fetchCurrentGrid() {
     if (memoryGrid.length === 0) {
       alert("先に「盤面を生成」を行ってください。");
