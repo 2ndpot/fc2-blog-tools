@@ -20,11 +20,20 @@ function getVirtualStrongLinks(candCells, num) {
     // 行・列の軸が交差する交点セル（仮想ノード）を探す
     for (const r of rows) {
       for (const c of cols) {
+        // ★交点マス(r, c)に候補数字 num が存在する場合は除外（黄色マスは空でなければならない）
+        const hasCandAtIntersection = boxCells.some(bc => bc.row === r && bc.col === c);
+        if (hasCandAtIntersection) continue;
+
         const rowPeers = boxCells.filter(bc => bc.row === r && bc.col !== c);
         const colPeers = boxCells.filter(bc => bc.col === c && bc.row !== r);
 
+        // ★ブロック内のすべての候補マスが、この交点(r, c)の行・列のいずれかに完全に収まっているか確認
+        if (rowPeers.length + colPeers.length !== boxCells.length) continue;
+
         // L字型またはT字型の条件（交点に対して両軸に1〜2個の候補が存在）
-        if (rowPeers.length >= 1 && colPeers.length >= 1) {
+        if (rowPeers.length >= 1 && rowPeers.length <= 2 &&
+            colPeers.length >= 1 && colPeers.length <= 2) {
+          
           // 仮想ノード用オブジェクト（座標保持用）
           const virtualNode = { row: r, col: c, box: b, isVirtual: true, val: [num] };
 
