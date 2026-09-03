@@ -132,6 +132,8 @@
 }
 .cand-num.hl-blue { background: var(--hl-blue-border); color: #fff !important; }
 .cand-num.hl-red  { background: var(--hl-red-bg); color: var(--hl-red-text) !important; outline: 1px solid var(--hl-red-text); }
+.cand-num.hl-chain-strong { background: #8e24aa; color: #fff !important; }
+.cand-num.hl-chain-weak   { background: #fff3e0; color: #e65100 !important; outline: 1px solid #e65100; }
 
 /* 解析ログ（プレイヤー用） */
 .player-log-title {
