@@ -19,7 +19,7 @@ export function analyzeNextStep(grid) {
   if (isComplete) {
     return {
       type: "cleared",
-      logMsg: "🎉 すべてのマスが埋まりました。",
+      logMsg: "最後まで解けました。",
       logClass: "ok"
     };
   }
@@ -92,7 +92,7 @@ export function analyzeNextStep(grid) {
 
   return {
     type: "stuck",
-    logMsg: "これ以上、論理手筋で進められるマスが見つかりませんでした。",
+    logMsg: "実装済みロジックで解けるのはここまでです。",
     logClass: "info"
   };
 }
