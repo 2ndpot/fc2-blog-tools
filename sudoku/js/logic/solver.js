@@ -90,5 +90,9 @@ export function analyzeNextStep(grid) {
     if (res) return res;
   }
 
-  return null;
+  return {
+    type: "stuck",
+    logMsg: "これ以上、論理手筋で進められるマスが見つかりませんでした。",
+    logClass: "info"
+  };
 }

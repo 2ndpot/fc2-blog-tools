@@ -170,7 +170,7 @@ document.querySelectorAll('script[type="application/json"].sudoku-json').forEach
       clearHighlights();
       const move = analyzeNextStep(memoryGrid);
       if (move && move.type === "cleared") { writeLog(move.logMsg, move.logClass); btnNext.disabled = true; render(); return; }
-      if (move === "stuck" || !move) { writeLog("これ以上進めません。", "info"); btnNext.disabled = true; render(); return; }
+      if (move && move.type === "stuck") { writeLog(move.logMsg, move.logClass); btnNext.disabled = true; render(); return; }
 
       currentMove = move;
       highlights.blueCells = move.blueCells || [];

@@ -403,8 +403,8 @@ import { analyzeNextStep } from './js/logic/solver.js';
         render();
         return;
       }
-      if (move === "stuck" || !move) {
-        writeLog("これ以上、論理手筋で進められるマスが見つかりませんでした。", "info");
+      if (move && move.type === "stuck") {
+        writeLog(move.logMsg, move.logClass);
         btnNext.disabled = true;
         render();
         return;
