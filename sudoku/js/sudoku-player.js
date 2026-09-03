@@ -169,7 +169,7 @@ document.querySelectorAll('script[type="application/json"].sudoku-json').forEach
     if (nextPhase === "preview") {
       clearHighlights();
       const move = analyzeNextStep(memoryGrid);
-      if (move === "cleared") { writeLog("🎉 完全クリアです！", "ok"); btnNext.disabled = true; render(); return; }
+      if (move && move.type === "cleared") { writeLog(move.logMsg, move.logClass); btnNext.disabled = true; render(); return; }
       if (move === "stuck" || !move) { writeLog("これ以上進めません。", "info"); btnNext.disabled = true; render(); return; }
 
       currentMove = move;

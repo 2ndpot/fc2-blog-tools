@@ -397,9 +397,8 @@ import { analyzeNextStep } from './js/logic/solver.js';
         render();
         return;
       }
-
-      if (move === "cleared") {
-        writeLog("🎉 すべてのマスが論理手筋のみで美しく埋まりました！完全クリアです。", "ok");
+      if (move && move.type === "cleared") {
+        writeLog(move.logMsg, move.logClass);
         btnNext.disabled = true;
         render();
         return;

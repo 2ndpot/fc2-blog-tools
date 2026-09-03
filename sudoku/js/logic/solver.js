@@ -16,7 +16,13 @@ import { findBUGPlusOne } from './bugPlusOne.js';
 export function analyzeNextStep(grid) {
   // 盤面がすでに完全に埋まっているかをチェック
   const isComplete = grid.every(c => c.status !== "candidate");
-  if (isComplete) return "cleared";
+  if (isComplete) {
+    return {
+      type: "cleared",
+      logMsg: "🎉 すべてのマスが埋まりました。",
+      logClass: "ok"
+    };
+  }
 
   // 1. Naked Single
   if (SOLVER_CONFIG.enableNakedSingle) {
