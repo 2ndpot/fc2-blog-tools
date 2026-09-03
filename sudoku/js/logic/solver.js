@@ -14,6 +14,10 @@ import { findBUGPlusOne } from './bugPlusOne.js';
  * @returns {Object|null} - 検出されたヒント情報、または null
  */
 export function analyzeNextStep(grid) {
+  // 盤面がすでに完全に埋まっているかをチェック
+  const isComplete = grid.every(c => c.status !== "candidate");
+  if (isComplete) return "cleared";
+
   // 1. Naked Single
   if (SOLVER_CONFIG.enableNakedSingle) {
     const res = findNakedSingle(grid);
