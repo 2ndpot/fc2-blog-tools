@@ -8,36 +8,35 @@ function getVirtualStrongLinks(candCells, num) {
 
   for (let b = 0; b < 9; b++) {
     const boxCells = candCells.filter(c => c.box === b);
-    // 条件1: 候補数が 3個 または 4個
-    if (boxCells.length !== 3 && boxCells.length !== 4) continue;
+    
+    // ブロック内の候補数が 2個〜4個 の場合に検証
+    if (boxCells.length < 2 || boxCells.length > 4) continue;
 
     const rows = [...new Set(boxCells.map(c => c.row))];
     const cols = [...new Set(boxCells.map(c => c.col))];
 
-    // 十字型(2x2軸交差)の2パターン(4x4系)は除外（7パターン限定）
-    if (rows.length > 2 || cols.length > 2) continue;
-
-    // 行・列の軸が交差する交点セル（仮想ノード）を探す
+    // 2x2グリッド（最大2行×2列）の範囲内に交点候補を探す
     for (const r of rows) {
       for (const c of cols) {
-        // ★交点マス(r, c)に候補数字 num が存在する場合は除外（黄色マスは空でなければならない）
+        // 交点マス(r, c)に候補数字 num が存在する場合は除外（黄色マスは空であること）
         const hasCandAtIntersection = boxCells.some(bc => bc.row === r && bc.col === c);
         if (hasCandAtIntersection) continue;
 
+        // 交点 (r, c) から見た行方向・列方向の候補マス群
         const rowPeers = boxCells.filter(bc => bc.row === r && bc.col !== c);
         const colPeers = boxCells.filter(bc => bc.col === c && bc.row !== r);
 
-        // ★ブロック内のすべての候補マスが、この交点(r, c)の行・列のいずれかに完全に収まっているか確認
+        // ブロック内の全候補が、この交点(r, c)の行軸または列軸のどちらかに完全に収まっているか
         if (rowPeers.length + colPeers.length !== boxCells.length) continue;
 
-        // L字型またはT字型の条件（交点に対して両軸に1〜2個の候補が存在）
+        // 行側・列側ともに1マス以上（最大2マス）配置されている場合、L字/T字構造が成立
         if (rowPeers.length >= 1 && rowPeers.length <= 2 &&
             colPeers.length >= 1 && colPeers.length <= 2) {
-          
-          // 仮想ノード用オブジェクト（座標保持用）
+
+          // 仮想ノード（黄色マス）を作成
           const virtualNode = { row: r, col: c, box: b, isVirtual: true, val: [num] };
 
-          // 軸上の各候補から仮想ノードへの「強鎖」を連結
+          // 軸上の各リアルノードと仮想ノード間に双方向の強鎖を張る
           rowPeers.forEach(rp => {
             colPeers.forEach(cp => {
               virtualLinks.push({ from: rp, to: virtualNode, isVirtual: true });
@@ -71,7 +70,7 @@ export function findXChain(grid) {
       }
     });
 
-    // 2. ★ 方便的7パターンによる「仮想強鎖」の検出と追加
+    // 2. 方便的7パターンによる「仮想強鎖」の検出と追加
     const virtualStrongLinks = getVirtualStrongLinks(candCells, num);
     const allStrongLinks = [...strongLinks, ...virtualStrongLinks];
 
