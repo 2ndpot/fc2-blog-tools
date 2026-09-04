@@ -62,6 +62,7 @@
 
 <script type="module">
 import { analyzeNextStep } from './js/logic/solver.js';
+import { checkValid } from './js/logic/utils.js';
 
 (() => {
   let memoryGrid = [];
@@ -214,12 +215,6 @@ import { analyzeNextStep } from './js/logic/solver.js';
     render();
   }
 
-  function checkValid(str, name) {
-    if (str.length !== 81) { writeLog(`【❌エラー】${name}が81桁ではありません。`, "err"); return false; }
-    if (!/^[0-9]+$/.test(str)) { writeLog(`【❌エラー】${name}に数字以外が含まれています。`, "err"); return false; }
-    return true;
-  }
-
   function checkDup(grid) {
     let err = false;
     grid.forEach((c, i) => {
@@ -346,7 +341,7 @@ import { analyzeNextStep } from './js/logic/solver.js';
 
     const sInit = elInit.value.trim();
 
-    if (!checkValid(sInit, "初期グリッド")) return;
+if (!checkValid(sInit, "初期グリッド", writeLog)) return;
 
     memoryGrid = sInit.split('').map((v, i) => {
       const vi = parseInt(v, 10), r = Math.floor(i / 9), c = i % 9, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
