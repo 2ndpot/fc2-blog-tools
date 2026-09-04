@@ -34,17 +34,12 @@
     <button class="btn-tgl" id="btn-clear" style="width: 100%; margin-bottom: 12px; background: #e0e0e0; color: #333; border: 1px solid #ccc;">全入力をクリア</button>
     
     <div class="form-group">
-      <label>1. 初期グリッド (81桁)</label>
+      <label>グリッドデータ (81桁)</label>
       <input type="text" id="in-init" value="000001000073086400000000031009100005700040000006000090000530260294000000000000007">
     </div>
-    <div class="form-group">
-      <label>2. 途中グリッド (81桁)</label>
-      <input type="text" id="in-curr" value="">
-    </div>
-    
+
     <div class="btn-group-row">
       <button class="btn-blue" id="btn-init-engine">盤面を生成</button>
-      <button class="btn-orange" id="btn-get-curr">途中グリッドを取得</button>
     </div>
 
     <div class="form-group" style="margin-top: 15px; background: #f0f4f8; padding: 10px; border-radius: 6px; border: 1px solid #d0d7de;">
@@ -77,14 +72,12 @@ import { checkValid } from './js/logic/utils.js';
 
   const elTitle   = document.getElementById("in-title");
   const elInit    = document.getElementById("in-init");
-  const elCurr    = document.getElementById("in-curr");
   const elGrid    = document.getElementById("grid");
   const elSvg     = document.getElementById("svg-overlay");
   const elLog     = document.getElementById("log");
   const elOut     = document.getElementById("out-json");
   const btnNext   = document.getElementById("btn-next");
   const btnPrev   = document.getElementById("btn-prev");
-  const btnGetCurr = document.getElementById("btn-get-curr");
 
   const getR = (obj) => obj.cell ? obj.cell.row : obj.row;
   const getC = (obj) => obj.cell ? obj.cell.col : obj.col;
@@ -313,19 +306,8 @@ import { checkValid } from './js/logic/utils.js';
     });
     renderOverlayLines();
 
-    const grid1Str = elInit.value.trim();
-    const grid2Str = elCurr.value.trim();
-    
-    if (grid2Str !== "") {
-      const jsonObj = {
-        title: elTitle.value,
-        grid1: grid1Str,
-        grid2: grid2Str
-      };
-      elOut.value = JSON.stringify(jsonObj, null, 2);
-    } else {
-      elOut.value = "";
-    }
+    const jsonObj = { title: elTitle.value, grid: elInit.value.trim() };
+    elOut.value = JSON.stringify(jsonObj, null, 2);
   }
 
   function setupEngine() {
@@ -353,17 +335,6 @@ if (!checkValid(sInit, "初期グリッド", writeLog)) return;
     
     initCandidates(memoryGrid);
     writeLog("盤面を生成しました。", "ok");
-    render();
-  }
-
-  function fetchCurrentGrid() {
-    if (memoryGrid.length === 0) {
-      alert("先に「盤面を生成」を行ってください。");
-      return;
-    }
-    const currentStr = memoryGrid.map(c => c.status === "candidate" ? 0 : c.val).join('');
-    elCurr.value = currentStr;
-    writeLog("現在の盤面（ヒント＋確定数字）を「2. 途中グリッド」に取り込みました。", "info");
     render();
   }
 
@@ -449,7 +420,6 @@ if (!checkValid(sInit, "初期グリッド", writeLog)) return;
 
   window.addEventListener("resize", renderOverlayLines);
   document.getElementById("btn-init-engine").addEventListener("click", setupEngine);
-  btnGetCurr.addEventListener("click", fetchCurrentGrid);
   btnNext.addEventListener("click", stepForward);
   btnPrev.addEventListener("click", stepBack);
 
@@ -470,7 +440,7 @@ if (!checkValid(sInit, "初期グリッド", writeLog)) return;
   document.getElementById("btn-reset").addEventListener("click", setupEngine);
   document.getElementById("btn-copy").addEventListener("click", () => { 
     if (elOut.value === "") {
-      alert("JSON出力がまだ生成されていません。「途中グリッドを取得」を実行してください。");
+      alert("JSON出力がまだ生成されていません。「盤面を生成」を実行してください。");
       return;
     }
     elOut.select(); document.execCommand("copy"); alert("JSONをコピーしました！"); 
@@ -481,7 +451,6 @@ if (!checkValid(sInit, "初期グリッド", writeLog)) return;
     
     elTitle.value = new Date().toISOString().split('T')[0];
     elInit.value = ""; 
-    elCurr.value = ""; 
     elOut.value = "";
     elLog.innerHTML = "";
 

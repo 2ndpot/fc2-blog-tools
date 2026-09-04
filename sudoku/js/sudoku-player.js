@@ -3,7 +3,7 @@ import { analyzeNextStep } from 'https://2ndpot.github.io/fc2-blog-tools/sudoku/
 document.querySelectorAll('script[type="application/json"].sudoku-json').forEach(scriptTag => {
   let data;
   try { data = JSON.parse(scriptTag.textContent); } catch (e) { return; }
-  if (!data.grid1) return;
+  if (!data.grid) return;
 
   const container = document.createElement('div');
   container.className = 'sudoku-player-container';
@@ -108,7 +108,7 @@ document.querySelectorAll('script[type="application/json"].sudoku-json').forEach
     btnPrev.disabled = true; btnNext.disabled = false;
     showCand = false; isCandidateInitialized = false; nextPhase = "preview"; currentMove = null;
 
-    memoryGrid = data.grid1.split('').map((v, i) => {
+    memoryGrid = data.grid.split('').map((v, i) => {
       const vi = parseInt(v, 10), r = Math.floor(i / 9), c = i % 9, b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
       if (vi !== 0) return { val: vi, status: "given", row: r, col: c, box: b };
       return { val: [], status: "candidate", row: r, col: c, box: b };
