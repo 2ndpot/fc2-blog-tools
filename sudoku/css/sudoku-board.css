@@ -135,22 +135,24 @@
 .cand-num.hl-chain-strong { background: #8e24aa; color: #fff !important; }
 .cand-num.hl-chain-weak   { background: #fff3e0; color: #e65100 !important; outline: 1px solid #e65100; }
 
-/* 解析ログ（プレイヤー用） */
+/* 解析ログ */
 .player-log-title {
   font-size: 0.9rem;
   margin: 8px 0 4px;
 }
-.player-log {
+.log-base {
   background: #1e1e1e;
   color: #dee2e6;
   border-radius: 4px;
-  height: 160px;
   overflow-y: auto;
-  padding: 8px;
   font-family: monospace;
-  font-size: 0.78rem;
   white-space: pre-wrap;
   line-height: 1.4;
+}
+.player-log {
+  height: 160px;
+  padding: 8px;
+  font-size: 0.78rem;
 }
 .log-err    { color: #f44336; }
 .log-ok     { color: #4ec9b0; padding-left: 8px; }

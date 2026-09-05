@@ -20,7 +20,7 @@ document.querySelectorAll('script[type="application/json"].sudoku-json').forEach
       <svg class="svg-overlay"></svg>
     </div>
     <div class="player-log-title">🔍 解析ログ</div>
-    <div class="player-log"></div>
+    <div class="player-log log-base"></div>
   `;
   scriptTag.parentNode.insertBefore(container, scriptTag.nextSibling);
 
