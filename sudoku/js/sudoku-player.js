@@ -185,7 +185,13 @@ document.querySelectorAll('script[type="application/json"].sudoku-json').forEach
           const tr = currentMove.targetRow !== undefined ? currentMove.targetRow : (currentMove.targetCell ? currentMove.targetCell.row : -1);
           const tc = currentMove.targetCol !== undefined ? currentMove.targetCol : (currentMove.targetCell ? currentMove.targetCell.col : -1);
           const target = memoryGrid.find(c => c.row === tr && c.col === tc);
-          if (target) { target.status = "solved"; target.val = currentMove.val; }
+          if (target) {
+            target.status = "solved";
+            target.val = currentMove.val;
+            writeLog(`  └ 確定：R${target.row+1}C${target.col+1} に 「${currentMove.val}」 を書き込みました。`, "info");
+          }
+        } else {
+          writeLog(`  └ 削除：対象の赤色候補数字を削除しました。`, "info");
         }
         if (currentMove.redCands) {
           currentMove.redCands.forEach(rc => {
