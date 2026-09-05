@@ -58,6 +58,7 @@
 <script type="module">
 import { analyzeNextStep } from './js/logic/solver.js';
 import { checkValid } from './js/logic/utils.js';
+import { MESSAGES } from './js/messages.js';
 
 (() => {
   let memoryGrid = [];
@@ -345,7 +346,7 @@ if (!checkValid(sInit, "初期グリッド", writeLog)) return;
     if (!isCandidateInitialized) {
       showCand = true;
       isCandidateInitialized = true;
-      writeLog("候補数字を表示しました。", "info");
+      writeLog(MESSAGES.candidateShown.logMsg, MESSAGES.candidateShown.logClass);
       render();
       return;
     }

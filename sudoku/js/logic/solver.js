@@ -1,6 +1,7 @@
 /**
  * 解析ロジック統合制御モジュール (js/logic/solver.js)
  */
+import { MESSAGES } from '../messages.js';
 import { SOLVER_CONFIG } from '../config.js';
 import { findNakedSingle, findHiddenSingle } from './singles.js';
 import { findNakedN, findHiddenN } from './subsets.js';
@@ -16,13 +17,7 @@ import { findBUGPlusOne } from './bugPlusOne.js';
 export function analyzeNextStep(grid) {
   // 盤面がすでに完全に埋まっているかをチェック
   const isComplete = grid.every(c => c.status !== "candidate");
-  if (isComplete) {
-    return {
-      type: "cleared",
-      logMsg: "最後まで解けました。",
-      logClass: "ok"
-    };
-  }
+  if (isComplete) return MESSAGES.cleared;
 
   // 1. Naked Single
   if (SOLVER_CONFIG.enableNakedSingle) {
@@ -90,9 +85,5 @@ export function analyzeNextStep(grid) {
     if (res) return res;
   }
 
-  return {
-    type: "stuck",
-    logMsg: "実装済みロジックで解けるのはここまでです。",
-    logClass: "info"
-  };
+  return MESSAGES.stuck;
 }

@@ -1,4 +1,5 @@
 import { analyzeNextStep } from 'https://2ndpot.github.io/fc2-blog-tools/sudoku/js/logic/solver.js';
+import { MESSAGES } from 'https://2ndpot.github.io/fc2-blog-tools/sudoku/js/messages.js';
 
 document.querySelectorAll('script[type="application/json"].sudoku-json').forEach(scriptTag => {
   let data;
@@ -122,7 +123,6 @@ document.querySelectorAll('script[type="application/json"].sudoku-json').forEach
       for (let i = 1; i <= 9; i++) if (!used.has(i)) c.val.push(i);
     });
 
-    writeLog("盤面を読み込みました。", "ok");
     render();
   }
 
@@ -163,7 +163,7 @@ document.querySelectorAll('script[type="application/json"].sudoku-json').forEach
 
     if (!isCandidateInitialized) {
       showCand = true; isCandidateInitialized = true;
-      writeLog("候補数字を表示しました。", "info"); render(); return;
+      writeLog(MESSAGES.candidateShown.logMsg, MESSAGES.candidateShown.logClass); render(); return;
     }
 
     if (nextPhase === "preview") {
