@@ -150,6 +150,7 @@
   font-family: monospace;
   font-size: 0.78rem;
   white-space: pre-wrap;
+  line-height: 1.4;
 }
 .log-err    { color: #f44336; }
 .log-ok     { color: #4ec9b0; padding-left: 8px; }
