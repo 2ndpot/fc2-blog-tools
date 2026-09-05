@@ -269,6 +269,13 @@
     }
   }
 
+  function attachTimeLinkEvent(inst, el) {
+    el.addEventListener('click', (e) => {
+      const idx = parseInt(e.target.getAttribute('data-index'));
+      jumpToTrack(inst, idx);
+    });
+  }
+
   function renderTable(inst) {
     const tbody = document.getElementById(`yts-track-list-${inst.appIndex}`);
     if (!tbody) return;
@@ -285,7 +292,9 @@
 
       const tdTime = document.createElement('td');
       const timeSpanId = `yts-time-disp-${inst.appIndex}-${track.index}`;
-      if (track.currentCount === 0) {
+      
+      // 再生中または無効化されているトラックはリンクにしない
+      if (track.currentCount === 0 || track.index === inst.currentTrackIndex) {
         tdTime.innerHTML = `<span class="yts-time-text" id="${timeSpanId}">${track.time}</span>`;
       } else {
         tdTime.innerHTML = `<span class="yts-time-link" id="${timeSpanId}" data-index="${track.index}">${track.time}</span>`;
@@ -320,10 +329,7 @@
     });
 
     tbody.querySelectorAll('.yts-time-link').forEach(el => {
-      el.addEventListener('click', (e) => {
-        const idx = parseInt(e.target.getAttribute('data-index'));
-        jumpToTrack(inst, idx);
-      });
+      attachTimeLinkEvent(inst, el);
     });
 
     updateRowHighlights(inst);
@@ -528,6 +534,13 @@
         if (loopCell) {
           loopCell.textContent = t.currentCount > 0 ? `${inst.currentLoop}/${t.currentCount}` : '-';
         }
+        // 現在再生中のトラックの時間リンクを外し、テキスト要素へ変更
+        if (timeDisp && timeDisp.classList.contains('yts-time-link')) {
+          timeDisp.className = 'yts-time-text';
+          timeDisp.removeAttribute('data-index');
+          const newDisp = timeDisp.cloneNode(true);
+          timeDisp.parentNode.replaceChild(newDisp, timeDisp);
+        }
       } else {
         row.classList.remove('active');
         if (loopCell) {
@@ -535,6 +548,14 @@
         }
         if (timeDisp) {
           timeDisp.textContent = t.time;
+          // 非再生かつ有効なトラックならリンク要素へ戻す
+          if (t.currentCount > 0 && timeDisp.classList.contains('yts-time-text')) {
+            timeDisp.className = 'yts-time-link';
+            timeDisp.setAttribute('data-index', t.index);
+            const newDisp = timeDisp.cloneNode(true);
+            timeDisp.parentNode.replaceChild(newDisp, timeDisp);
+            attachTimeLinkEvent(inst, newDisp);
+          }
         }
       }
 
