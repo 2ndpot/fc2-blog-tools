@@ -92,6 +92,7 @@
           <div class="yts-embed-responsive" id="yts-embed-${appIndex}">
             <div id="yts-yt-player-${appIndex}"></div>
             <div class="yts-danmaku-stage" id="yts-danmaku-${appIndex}"></div>
+            <div class="yts-noise-overlay" id="yts-noise-${appIndex}"></div>
           </div>
         </div>
         <div class="yts-controls">
@@ -199,6 +200,20 @@
     }
   }
 
+  function triggerSwitchNoise(inst) {
+    const noiseEl = document.getElementById(`yts-noise-${inst.appIndex}`);
+    if (!noiseEl) return;
+    
+    // 一旦クラスを外して再計算（連打時対策）させてから一瞬だけアクティブ化
+    noiseEl.classList.remove('active');
+    void noiseEl.offsetWidth; 
+    noiseEl.classList.add('active');
+
+    setTimeout(() => {
+      noiseEl.classList.remove('active');
+    }, 80); // 80ミリ秒間だけ表示
+  }
+
   function applyFilterUI(inst, filterValue) {
     stopRandomFilter(inst);
 
@@ -217,10 +232,15 @@
   function startRandomFilter(inst) {
     stopRandomFilter(inst);
     const filters = ['none', 'bw', 'sepia'];
+    
+    // 最初の1発目
+    triggerSwitchNoise(inst);
+
     inst.randomFilterInterval = setInterval(() => {
       const randomFilter = filters[Math.floor(Math.random() * filters.length)];
+      triggerSwitchNoise(inst);
       applyFilterClass(inst, randomFilter);
-    }, 200); // 200ms間隔で切り替え
+    }, 300); // ノイズが入るため切り替えを少しゆったり（300ms）に変更
   }
 
   function stopRandomFilter(inst) {
