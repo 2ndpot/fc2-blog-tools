@@ -60,7 +60,7 @@ export function findXChain(grid) {
               redCands: targetCells.map(c => ({ cell: c, num: num, row: c.row, col: c.col })),
               chainLinks: chainLinks,
               logMsg: `🔗 [X-Chain] 数字[${num}] : R${startCell.row+1}C${startCell.col+1} から R${endCell.row+1}C${endCell.col+1} への連鎖により、${targetCells.map(c=>`R${c.row+1}C${c.col+1}`).join(', ')} から[${num}]を除外できます。`,
-              logClass: "xchain"
+              logClass: "chain"
             };
           }
         }
