@@ -101,8 +101,6 @@
             <option value="none">🎬 総天然色</option>
             <option value="bw">📷 昭和白黒</option>
             <option value="sepia">📜 昭和セピア</option>
-            <option value="film">🎞️ 8mmフィルム</option>
-            <option value="bw-flip">🙃 白黒(逆さま)</option>
           </select>
         </div>
         <div class="yts-comment-form">
@@ -192,7 +190,7 @@
     const embedWrapper = document.getElementById(`yts-embed-${inst.appIndex}`);
     const filterSelect = document.getElementById(`yts-select-filter-${inst.appIndex}`);
     if (embedWrapper) {
-      embedWrapper.classList.remove('yts-filter-bw', 'yts-filter-sepia', 'yts-filter-film', 'yts-filter-bw-flip');
+      embedWrapper.classList.remove('yts-filter-bw', 'yts-filter-sepia');
       if (filterValue !== 'none') {
         embedWrapper.classList.add(`yts-filter-${filterValue}`);
       }
@@ -203,7 +201,6 @@
   }
 
   function shootDanmaku(inst, text) {
-    // 再生中でない場合は弾幕を流さない
     if (!inst.isPlaying) return;
 
     const stage = document.getElementById(`yts-danmaku-${inst.appIndex}`);
@@ -293,7 +290,6 @@
       const tdTime = document.createElement('td');
       const timeSpanId = `yts-time-disp-${inst.appIndex}-${track.index}`;
       
-      // 再生中または無効化されているトラックはリンクにしない
       if (track.currentCount === 0 || track.index === inst.currentTrackIndex) {
         tdTime.innerHTML = `<span class="yts-time-text" id="${timeSpanId}">${track.time}</span>`;
       } else {
@@ -534,7 +530,6 @@
         if (loopCell) {
           loopCell.textContent = t.currentCount > 0 ? `${inst.currentLoop}/${t.currentCount}` : '-';
         }
-        // 現在再生中のトラックの時間リンクを外し、テキスト要素へ変更
         if (timeDisp && timeDisp.classList.contains('yts-time-link')) {
           timeDisp.className = 'yts-time-text';
           timeDisp.removeAttribute('data-index');
@@ -548,7 +543,6 @@
         }
         if (timeDisp) {
           timeDisp.textContent = t.time;
-          // 非再生かつ有効なトラックならリンク要素へ戻す
           if (t.currentCount > 0 && timeDisp.classList.contains('yts-time-text')) {
             timeDisp.className = 'yts-time-link';
             timeDisp.setAttribute('data-index', t.index);
