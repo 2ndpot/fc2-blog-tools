@@ -68,6 +68,7 @@
         currentTrackIndex: -1,
         currentLoop: 1,
         commentInterval: null,
+        randomFilterInterval: null,
         isPlaying: false
       };
 
@@ -101,6 +102,7 @@
             <option value="none">🎬 総天然色</option>
             <option value="bw">📷 昭和白黒</option>
             <option value="sepia">📜 昭和セピア</option>
+            <option value="random">⚡ 昭和バキバキ (ランダム)</option>
           </select>
         </div>
         <div class="yts-comment-form">
@@ -158,6 +160,7 @@
     if (newVideoIdx < 0 || newVideoIdx >= inst.playlist.length) return;
     
     clearAllDanmaku(inst);
+    stopRandomFilter(inst);
 
     inst.currentVideoIndex = newVideoIdx;
     inst.currentTrackIndex = -1;
@@ -186,17 +189,44 @@
     return inst.playlist[inst.currentVideoIndex].parsedTracks;
   }
 
-  function applyFilterUI(inst, filterValue) {
+  function applyFilterClass(inst, filterValue) {
     const embedWrapper = document.getElementById(`yts-embed-${inst.appIndex}`);
-    const filterSelect = document.getElementById(`yts-select-filter-${inst.appIndex}`);
     if (embedWrapper) {
       embedWrapper.classList.remove('yts-filter-bw', 'yts-filter-sepia');
-      if (filterValue !== 'none') {
+      if (filterValue === 'bw' || filterValue === 'sepia') {
         embedWrapper.classList.add(`yts-filter-${filterValue}`);
       }
     }
+  }
+
+  function applyFilterUI(inst, filterValue) {
+    stopRandomFilter(inst);
+
+    const filterSelect = document.getElementById(`yts-select-filter-${inst.appIndex}`);
     if (filterSelect) {
-      filterSelect.value = filterValue;
+      filterSelect.value = (filterValue === 'baki') ? 'random' : filterValue;
+    }
+
+    if (filterValue === 'random' || filterValue === 'baki') {
+      startRandomFilter(inst);
+    } else {
+      applyFilterClass(inst, filterValue);
+    }
+  }
+
+  function startRandomFilter(inst) {
+    stopRandomFilter(inst);
+    const filters = ['none', 'bw', 'sepia'];
+    inst.randomFilterInterval = setInterval(() => {
+      const randomFilter = filters[Math.floor(Math.random() * filters.length)];
+      applyFilterClass(inst, randomFilter);
+    }, 200); // 200ms間隔で切り替え
+  }
+
+  function stopRandomFilter(inst) {
+    if (inst.randomFilterInterval) {
+      clearInterval(inst.randomFilterInterval);
+      inst.randomFilterInterval = null;
     }
   }
 
@@ -389,6 +419,7 @@
             else if (e.data === YT.PlayerState.ENDED) {
               inst.isPlaying = false;
               clearAllDanmaku(inst);
+              stopRandomFilter(inst);
               if (inst.currentVideoIndex < inst.playlist.length - 1) {
                 switchVideo(inst, inst.currentVideoIndex + 1, true);
               }
@@ -441,6 +472,7 @@
               switchVideo(inst, inst.currentVideoIndex + 1, true);
             } else {
               clearAllDanmaku(inst);
+              stopRandomFilter(inst);
             }
           }
         }
@@ -588,6 +620,7 @@
   }
 
   function emergencyStop(inst) {
+    stopRandomFilter(inst);
     if (inst.player && typeof inst.player.pauseVideo === 'function') {
       inst.player.pauseVideo();
     }
