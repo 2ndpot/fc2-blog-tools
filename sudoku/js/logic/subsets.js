@@ -67,7 +67,7 @@ export function findNakedN(grid, size, labelName, logClass) {
               blueCells: group,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `✨ ${labelName}: ${houseDesc}の ${coords} を候補 [${tupleVals.join(',')}] が占拠。`,
+              logMsg: `✨ ${labelName}: ${houseDesc}の ${coords} を占拠している候補 [${tupleVals.join(',')}] を発見。`,
               logClass: logClass
             };
           }
@@ -150,7 +150,7 @@ export function findHiddenN(grid, size, labelName, logClass) {
               blueCells: groupCells,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `🌸 ${labelName}: ${houseDesc} の ${coords} を候補 [${numGroup.join(',')}] が占拠。`,
+              logMsg: `🌸 ${labelName}: ${houseDesc} の ${coords} を選挙している候補 [${numGroup.join(',')}] を発見。`,
               logClass: logClass
             };
           }
