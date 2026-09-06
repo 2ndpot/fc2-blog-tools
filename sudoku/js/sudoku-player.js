@@ -188,10 +188,10 @@ document.querySelectorAll('script[type="application/json"].sudoku-json').forEach
           if (target) {
             target.status = "solved";
             target.val = currentMove.val;
-            writeLog(`  └ 確定：R${target.row+1}C${target.col+1} に 「${currentMove.val}」 を書き込みました。`, "info");
+            writeLog(`  └ 確定: R${target.row+1}C${target.col+1} に 「${currentMove.val}」 を書き込みました。`, "info");
           }
         } else {
-          writeLog(`  └ 削除：対象の赤色候補数字を削除しました。`, "info");
+          writeLog(`  └ 削除: 対象の赤色候補数字を削除しました。`, "info");
         }
         if (currentMove.redCands) {
           currentMove.redCands.forEach(rc => {
