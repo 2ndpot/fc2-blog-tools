@@ -56,9 +56,9 @@ export function findNakedN(grid, size, labelName, logClass) {
             group.forEach(c => tupleVals.forEach(n => { if(c.val.includes(n)) blueCands.push({cell: c, num: n}); }));
             const coords = group.map(c => `R${c.row+1}C${c.col+1}`).join(', ');
 
-            let houseDesc = `第${hIdx+1}${getHouseName(houseType)}`;
+            let houseDesc = `${getHouseName(houseType)}${hIdx+1}`;
             if (extraHouses.length > 0) {
-              const extraNames = extraHouses.map(eh => `第${eh.idx+1}${getHouseName(eh.type)}`).join('・');
+              const extraNames = extraHouses.map(eh => `${getHouseName(eh.type)}${eh.idx+1}`).join('・');
               houseDesc += `（および${extraNames}）`;
             }
 
@@ -67,7 +67,7 @@ export function findNakedN(grid, size, labelName, logClass) {
               blueCells: group,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `✨ ${labelName}: ${houseDesc}の ${coords} で {${tupleVals.join(',')}} が同盟状態。赤色の候補数字を削除できます。`,
+              logMsg: `✨ ${labelName}: ${houseDesc}の ${coords} を [${tupleVals.join(',')}] が占拠。`,
               logClass: logClass
             };
           }
