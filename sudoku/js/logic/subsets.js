@@ -67,7 +67,7 @@ export function findNakedN(grid, size, labelName, logClass) {
               blueCells: group,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `✨ [${labelName}] ${houseDesc}の ${coords} で {${tupleVals.join(',')}} が同盟状態。赤色の候補数字を削除できます。`,
+              logMsg: `✨ ${labelName}: ${houseDesc}の ${coords} で {${tupleVals.join(',')}} が同盟状態。赤色の候補数字を削除できます。`,
               logClass: logClass
             };
           }
@@ -150,7 +150,7 @@ export function findHiddenN(grid, size, labelName, logClass) {
               blueCells: groupCells,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `🌸 [${labelName}] ${houseDesc} にて 数字 {${numGroup.join(',')}} が [ ${coords} ] に限定。関連領域の不要な候補数字を削除します。`,
+              logMsg: `🌸 ${labelName}: ${houseDesc} にて 数字 {${numGroup.join(',')}} が [ ${coords} ] に限定。関連領域の不要な候補数字を削除します。`,
               logClass: logClass
             };
           }
