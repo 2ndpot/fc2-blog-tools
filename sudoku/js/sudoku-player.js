@@ -188,7 +188,7 @@ document.querySelectorAll('script[type="application/json"].sudoku-json').forEach
           if (target) {
             target.status = "solved";
             target.val = currentMove.val;
-            writeLog(`  └ 処理: [${currentMove.val}] を R${target.row+1}C${target.col+1} の解とし、落選候補を削除。`, "info");
+            writeLog(`  └ 処理: R${target.row+1}C${target.col+1} の解を [${currentMove.val}] とし、落選候補を削除。`, "info");
           }
         } else {
           writeLog(`  └ 処理: 落選候補を削除。`, "info");
