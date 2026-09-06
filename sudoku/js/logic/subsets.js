@@ -150,7 +150,7 @@ export function findHiddenN(grid, size, labelName, logClass) {
               blueCells: groupCells,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `🌸 ${labelName}: ${houseDesc} の ${coords} を選挙している候補 [${numGroup.join(',')}] を発見。`,
+              logMsg: `🌸 ${labelName}: ${houseDesc} の ${coords} を占拠している候補 [${numGroup.join(',')}] を発見。`,
               logClass: logClass
             };
           }
