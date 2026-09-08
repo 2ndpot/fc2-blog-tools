@@ -67,7 +67,7 @@ export function findNakedN(grid, size, labelName, logClass) {
               blueCells: group,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `✨ ${labelName}: ${houseDesc}, ${coords}, P(${tupleVals.join(',')})`,
+              logMsg: `✨ ${labelName}: ${houseDesc}, ${coords}, P(${tupleVals.join('|')})`,
               logClass: logClass
             };
           }
@@ -150,7 +150,7 @@ export function findHiddenN(grid, size, labelName, logClass) {
               blueCells: groupCells,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `🌸 ${labelName}: ${houseDesc}, ${coords}, P(${numGroup.join(',')})`,
+              logMsg: `🌸 ${labelName}: ${houseDesc}, ${coords}, P(${numGroup.join('|')})`,
               logClass: logClass
             };
           }
