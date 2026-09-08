@@ -31,7 +31,7 @@ export function findNakedSingle(grid) {
     blueCells: [target],
     blueCands: [{ cell: target, num: val }],
     redCands: redCands,
-    logMsg: `💡 Naked Single: R${target.row+1}C${target.col+1} の唯一の候補 [${val}] を発見。`,
+    logMsg: `💡 Naked Single: R${target.row+1}C${target.col+1}、候補 [${val}]、発見。`,
     logClass: "ok"
   };
 }
@@ -71,7 +71,7 @@ export function findHiddenSingle(grid) {
               blueCells: [target],
               blueCands: [{ cell: target, num: num }],
               redCands: redCands,
-              logMsg: `💡 Hidden Single: ${getHouseName(houseType)}${hIdx+1} の R${target.row+1}C${target.col+1} に潜伏している唯一の候補 [${num}] を発見。`,
+              logMsg: `💡 Hidden Single: ${getHouseName(houseType)}${hIdx+1}、R${target.row+1}C${target.col+1}、候補 [${num}]、発見。`,
               logClass: "ok"
             };
           }

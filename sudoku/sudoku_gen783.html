@@ -200,7 +200,7 @@ import { MESSAGES } from './js/messages.js';
     const idx = cell.val.indexOf(num);
     if (idx > -1) {
       cell.val.splice(idx, 1);
-      writeLog(`【🖐️手動介入】R${cell.row + 1}C${cell.col + 1} から 候補数字 [${num}] を手動削除しました。`, "manual");
+      writeLog(`🖐️手動介入: R${cell.row + 1}C${cell.col + 1}、候補 [${num}]、削除。`, "manual");
     }
 
     nextPhase = "preview";

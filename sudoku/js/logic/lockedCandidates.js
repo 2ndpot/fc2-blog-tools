@@ -69,7 +69,7 @@ export function findLockedCandidates(grid) {
               blueCells: rowCells,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `👉 Locked Candidates (Claiming): 第${r+1}行の数字「${num}」は第${targetBox+1}ブロックに限定。同ブロックの他行の「${num}」を削除します。`,
+              logMsg: `👉 Locked Candidates (Claiming): 行${r+1}、ブロック${targetBox+1}、候補 [${num}]、発見。`,
               logClass: "lock"
             };
           }
