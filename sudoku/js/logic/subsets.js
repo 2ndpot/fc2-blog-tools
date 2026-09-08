@@ -59,7 +59,7 @@ export function findNakedN(grid, size, labelName, logClass) {
             let houseDesc = `${getHouseName(houseType)}${hIdx+1}`;
             if (extraHouses.length > 0) {
               const extraNames = extraHouses.map(eh => `${getHouseName(eh.type)}${eh.idx+1}`).join('・');
-              houseDesc += `（および${extraNames}）`;
+              houseDesc += `(および${extraNames})`;
             }
 
             return {
@@ -67,7 +67,7 @@ export function findNakedN(grid, size, labelName, logClass) {
               blueCells: group,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `✨ ${labelName}: ${houseDesc}の ${coords} を占拠している候補 [${tupleVals.join(',')}] を発見。`,
+              logMsg: `✨ ${labelName}: ${houseDesc}, ${coords}, P(${tupleVals.join(',')})`,
               logClass: logClass
             };
           }
@@ -150,7 +150,7 @@ export function findHiddenN(grid, size, labelName, logClass) {
               blueCells: groupCells,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `🌸 ${labelName}: ${houseDesc} の ${coords} を占拠している候補 [${numGroup.join(',')}] を発見。`,
+              logMsg: `🌸 ${labelName}: ${houseDesc}, ${coords}, P(${numGroup.join(',')})`,
               logClass: logClass
             };
           }

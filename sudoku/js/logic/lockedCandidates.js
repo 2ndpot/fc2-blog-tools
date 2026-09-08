@@ -25,7 +25,7 @@ export function findLockedCandidates(grid) {
               blueCells: numCells,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `👉 Locked Candidates (Pointing): 第${boxIdx+1}ブロックの数字「${num}」は第${r+1}行に限定。第${r+1}行の他ブロックの「${num}」を削除します。`,
+              logMsg: `👉 Locked Candidates (Pointing): B${boxIdx+1}, R${r+1}, P${num}`,
               logClass: "lock"
             };
           }
@@ -44,7 +44,7 @@ export function findLockedCandidates(grid) {
               blueCells: numCells,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `👉 Locked Candidates (Pointing): 第${boxIdx+1}ブロックの数字「${num}」は第${cIdx+1}列に限定。第${cIdx+1}列の他ブロックの「${num}」を削除します。`,
+              logMsg: `👉 Locked Candidates (Pointing): B${boxIdx+1}, C${cIdx+1}, P${num}`,
               logClass: "lock"
             };
           }
@@ -69,7 +69,7 @@ export function findLockedCandidates(grid) {
               blueCells: rowCells,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `👉 Locked Candidates (Claiming): 行${r+1}、ブロック${targetBox+1}、候補 [${num}]、発見。`,
+              logMsg: `👉 Locked Candidates (Claiming): R${r+1}, B${targetBox+1}, P${num}`,
               logClass: "lock"
             };
           }
@@ -91,7 +91,7 @@ export function findLockedCandidates(grid) {
               blueCells: colCells,
               blueCands: blueCands,
               redCands: redCands,
-              logMsg: `👉 Locked Candidates (Claiming): 第${cIdx+1}列の数字「${num}」は第${targetBox+1}ブロックに限定。同ブロックの他列の「${num}」を削除します。`,
+              logMsg: `👉 Locked Candidates (Claiming): C${cIdx+1}, B${targetBox+1}, P${num}`,
               logClass: "lock"
             };
           }

@@ -200,7 +200,7 @@ import { MESSAGES } from './js/messages.js';
     const idx = cell.val.indexOf(num);
     if (idx > -1) {
       cell.val.splice(idx, 1);
-      writeLog(`🖐️手動介入: R${cell.row + 1}C${cell.col + 1}、候補 [${num}]、削除。`, "manual");
+      writeLog(`🖐️手動介入: R${cell.row + 1}C${cell.col + 1}, P${num}, 削除`, "manual");
     }
 
     nextPhase = "preview";
@@ -217,7 +217,7 @@ import { MESSAGES } from './js/messages.js';
         if (i === ti || t.status === "candidate") return;
         if (c.val === t.val && (c.row === t.row || c.col === t.col || c.box === t.box)) {
           c.err = t.err = err = true;
-          writeLog(`【❌重複エラー】R${c.row+1}C${c.col+1} と R${t.row+1}C${t.col+1} で「${c.val}」が重複。`, "err");
+          writeLog(`❌重複エラー: R${c.row+1}C${c.col+1}, R${t.row+1}C${t.col+1}, ${c.val}, 重複`, "err");
         }
       });
     });
