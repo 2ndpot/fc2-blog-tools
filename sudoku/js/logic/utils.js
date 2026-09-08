@@ -3,12 +3,12 @@
  */
 
 /**
- * ハウス（領域）の種別を日本語表記に変換
+ * ハウス（領域）の種別をアルファベットに変換
  * @param {string} type - "row", "col", "box"
- * @returns {string} - "行", "列", "ブロック"
+ * @returns {string} - "R", "C", "B"
  */
 export const getHouseName = (type) => {
-  return type === "row" ? "行" : type === "col" ? "列" : "ブロック";
+  return type === "row" ? "R" : type === "col" ? "C" : "B";
 };
 
 /**
