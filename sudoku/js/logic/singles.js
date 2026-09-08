@@ -31,7 +31,7 @@ export function findNakedSingle(grid) {
     blueCells: [target],
     blueCands: [{ cell: target, num: val }],
     redCands: redCands,
-    logMsg: `💡 Naked Single: R${target.row+1}C${target.col+1}, P${val}]`,
+    logMsg: `💡 Naked Single: R${target.row+1}C${target.col+1}, P${val}`,
     logClass: "ok"
   };
 }
