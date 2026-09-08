@@ -54,7 +54,7 @@ export function findNakedN(grid, size, labelName, logClass) {
           if (redCands.length > 0) {
             const blueCands = [];
             group.forEach(c => tupleVals.forEach(n => { if(c.val.includes(n)) blueCands.push({cell: c, num: n}); }));
-            const coords = group.map(c => `R${c.row+1}C${c.col+1}`).join(', ');
+            const coords = group.map(c => `R${c.row+1}C${c.col+1}`).join('|');
 
             let houseDesc = `${getHouseName(houseType)}${hIdx+1}`;
             if (extraHouses.length > 0) {
@@ -138,7 +138,7 @@ export function findHiddenN(grid, size, labelName, logClass) {
           });
 
           if (redCands.length > 0) {
-            const coords = groupCells.map(c => `R${c.row+1}C${c.col+1}`).join(', ');
+            const coords = groupCells.map(c => `R${c.row+1}C${c.col+1}`).join('|');
             let houseDesc = `${getHouseName(houseType)}${hIdx+1}`;
             if (extraHouses.length > 0) {
               const extraNames = extraHouses.map(eh => `${getHouseName(eh.type)}${eh.idx+1}`).join('・');
