@@ -47,6 +47,16 @@
       <div class="digit-btn-group" id="digit-buttons"></div>
     </div>
 
+    <div class="form-group" style="margin-top: 15px; background: #f0f4f8; padding: 10px; border-radius: 6px; border: 1px solid #d0d7de;">
+      <label>🔗 数字強調 & 共役対（強鎖）フィルター</label>
+      <div class="digit-btn-group" id="digit-buttons"></div>
+    </div>
+    
+    <div class="form-group" style="margin-top: 15px; background: #f4f4f8; padding: 10px; border-radius: 6px; border: 1px solid #d0d0de;">
+      <label>🔺 L字(交点なし)検索</label>
+      <button class="btn-tgl" id="btn-find-lshape">検索実行</button>
+    </div>
+
     <div style="margin-top:15px;">
       <label>💻 ブログ埋め込み用 JSON 出力</label>
       <textarea id="out-json" readonly></textarea>
@@ -59,6 +69,7 @@
 import { analyzeNextStep } from './js/logic/solver.js';
 import { checkValid } from './js/logic/utils.js';
 import { MESSAGES } from './js/messages.js';
+import { findLShapes } from './js/experimental/lShapeFinder.js';
 
 (() => {
   let memoryGrid = [];
@@ -439,6 +450,7 @@ if (!checkValid(sInit, "初期グリッド", writeLog)) return;
   });
 
   document.getElementById("btn-reset").addEventListener("click", setupEngine);
+  document.getElementById("btn-find-lshape").addEventListener("click", () => findLShapes(memoryGrid, writeLog));
   document.getElementById("btn-copy").addEventListener("click", () => { 
     if (elOut.value === "") {
       alert("JSON出力がまだ生成されていません。「盤面を生成」を実行してください。");
@@ -446,7 +458,7 @@ if (!checkValid(sInit, "初期グリッド", writeLog)) return;
     }
     elOut.select(); document.execCommand("copy"); alert("JSONをコピーしました！"); 
   });
-  
+
   document.getElementById("btn-clear").addEventListener("click", () => {
     if (!confirm("すべての入力データ、検証ログ、出力JSONをリセットしますか？")) return;
     
