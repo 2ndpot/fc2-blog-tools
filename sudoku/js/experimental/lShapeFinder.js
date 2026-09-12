@@ -2,6 +2,7 @@
  * L字(交点なし)パターン検索モジュール (js/experimental/lShapeFinder.js)
  * 群鎖の仮説検証用。ボックス内の1マス(交点)にnがなく、
  * そこから伸びる行・列のアームにnがどう立っているかでパターン1〜3を判定する。
+ * あわせて、アーム以外に余計な候補マスがあるかどうかもログに残す。
  */
 export function findLShapes(memoryGrid, writeLog) {
   const corners = [[0,0],[0,2],[2,0],[2,2]];
@@ -41,8 +42,23 @@ export function findLShapes(memoryGrid, writeLog) {
 
         if (patternNum > 0) {
           found++;
+
+          // 交点・アーム以外のボックス内マスに、余計な候補nがないか調べる
+          const usedCells = new Set([pivot, ...cells]);
+          const extraCells = [];
+          for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+              const cell = cellAt(r, c);
+              if (usedCells.has(cell)) continue;
+              if (hasN(cell)) extraCells.push(cell);
+            }
+          }
+          const extraStr = extraCells.length > 0
+            ? `余計な候補あり(${extraCells.map(c => `R${c.row+1}C${c.col+1}`).join(',')})`
+            : "余計な候補なし";
+
           const cellStr = cells.map(c => `R${c.row+1}C${c.col+1}`).join(',');
-          writeLog(`L字[${patternNum}] B${b+1}: 交点R${pivot.row+1}C${pivot.col+1}, セル${cellStr}, P${n}`, "info");
+          writeLog(`L字[${patternNum}] B${b+1}: 交点R${pivot.row+1}C${pivot.col+1}, セル${cellStr}, P${n} [${extraStr}]`, "info");
         }
       });
     }
