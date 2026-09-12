@@ -46,7 +46,6 @@ function searchWithVirtualNode(grid, n, pivot, armCells) {
   const realCands = grid.filter(c => c.status === "candidate" && c.val.includes(n));
   const virtualCell = { row: pivot.row, col: pivot.col, box: -1, isVirtual: true };
 
-  // 強リンクは「行・列・ボックス」ごとに、交点の行/列のときだけアームを除いて仮想ノードを差し込む
   const strongLinks = [];
   for (let r = 0; r < 9; r++) {
     let house = realCands.filter(c => c.row === r);
@@ -59,7 +58,7 @@ function searchWithVirtualNode(grid, n, pivot, armCells) {
     if (house.length === 2) { strongLinks.push({ from: house[0], to: house[1] }); strongLinks.push({ from: house[1], to: house[0] }); }
   }
   for (let b = 0; b < 9; b++) {
-    const house = realCands.filter(c => c.box === b); // ボックスは仮想ノード無関係、通常通り
+    const house = realCands.filter(c => c.box === b);
     if (house.length === 2) { strongLinks.push({ from: house[0], to: house[1] }); strongLinks.push({ from: house[1], to: house[0] }); }
   }
   if (strongLinks.length === 0) return null;
@@ -73,9 +72,10 @@ function searchWithVirtualNode(grid, n, pivot, armCells) {
 
     while (queue.length > 0) {
       const { current, path, lastLink } = queue.shift();
+      const realLen = path.filter(c => !c.isVirtual).length;   // ← 仮想ノードを除いた実マス数
 
       if (current.isVirtual) {
-        if (path.length >= 8) continue;
+        if (realLen >= 8) continue;
         const prev = path[path.length - 2];
         strongLinks
           .filter(l => l.from === current && l.to !== prev && !path.includes(l.to))
@@ -83,7 +83,7 @@ function searchWithVirtualNode(grid, n, pivot, armCells) {
         continue;
       }
 
-      if (path.length >= 4 && path.length % 2 === 0 && lastLink === "strong") {
+      if (realLen >= 4 && realLen % 2 === 0 && lastLink === "strong") {
         const hasVirtual = path.some(c => c.isVirtual);
         if (hasVirtual) {
           const endCell = current;
@@ -101,7 +101,7 @@ function searchWithVirtualNode(grid, n, pivot, armCells) {
         }
       }
 
-      if (path.length >= 8) continue;
+      if (realLen >= 8) continue;
 
       if (lastLink === null || lastLink === "weak") {
         strongLinks
