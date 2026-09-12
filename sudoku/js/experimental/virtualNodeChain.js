@@ -29,7 +29,7 @@ export function findVirtualNodeChains(grid, writeLog) {
 
         if (!armCells) continue;
 
-        const result = searchWithVirtualNode(grid, n, pivot);
+        const result = searchWithVirtualNode(grid, n, pivot, armCells);
         if (result) {
           foundCount++;
           writeLog(`L字仮説[${n}]: ${result.desc}`, "info");
@@ -41,39 +41,33 @@ export function findVirtualNodeChains(grid, writeLog) {
   if (foundCount === 0) writeLog("L字仮説による除外は見つかりませんでした。", "info");
 }
 
-function searchWithVirtualNode(grid, n, pivot) {
-  // ボックス内で候補nを持つマスは(アーム以外も含めて)全部マスキングし、交点を仮想ノードに差し替える
-  const boxRow = Math.floor(pivot.row / 3) * 3;
-  const boxCol = Math.floor(pivot.col / 3) * 3;
-  const masked = new Set();
-  for (let r = boxRow; r < boxRow + 3; r++) {
-    for (let c = boxCol; c < boxCol + 3; c++) {
-      const cell = grid.find(g => g.row === r && g.col === c);
-      if (cell && cell.status === "candidate" && cell.val.includes(n)) masked.add(cell);
-    }
-  }
-
+function searchWithVirtualNode(grid, n, pivot, armCells) {
+  const armSet = new Set(armCells);
+  const realCands = grid.filter(c => c.status === "candidate" && c.val.includes(n));
   const virtualCell = { row: pivot.row, col: pivot.col, box: -1, isVirtual: true };
-  const candCells = grid
-    .filter(c => c.status === "candidate" && c.val.includes(n) && !masked.has(c))
-    .concat([virtualCell]);
 
-  if (candCells.length < 3) return null;
-
+  // 強リンクは「行・列・ボックス」ごとに、交点の行/列のときだけアームを除いて仮想ノードを差し込む
   const strongLinks = [];
-  ["row", "col", "box"].forEach(houseType => {
-    for (let i = 0; i < 9; i++) {
-      const house = candCells.filter(c => c[houseType] === i);
-      if (house.length === 2) {
-        strongLinks.push({ from: house[0], to: house[1] });
-        strongLinks.push({ from: house[1], to: house[0] });
-      }
-    }
-  });
+  for (let r = 0; r < 9; r++) {
+    let house = realCands.filter(c => c.row === r);
+    if (r === pivot.row) house = [...house.filter(c => !armSet.has(c)), virtualCell];
+    if (house.length === 2) { strongLinks.push({ from: house[0], to: house[1] }); strongLinks.push({ from: house[1], to: house[0] }); }
+  }
+  for (let cIdx = 0; cIdx < 9; cIdx++) {
+    let house = realCands.filter(c => c.col === cIdx);
+    if (cIdx === pivot.col) house = [...house.filter(c => !armSet.has(c)), virtualCell];
+    if (house.length === 2) { strongLinks.push({ from: house[0], to: house[1] }); strongLinks.push({ from: house[1], to: house[0] }); }
+  }
+  for (let b = 0; b < 9; b++) {
+    const house = realCands.filter(c => c.box === b); // ボックスは仮想ノード無関係、通常通り
+    if (house.length === 2) { strongLinks.push({ from: house[0], to: house[1] }); strongLinks.push({ from: house[1], to: house[0] }); }
+  }
   if (strongLinks.length === 0) return null;
 
+  const candCells = [...realCands, virtualCell];
+
   for (const startCell of candCells) {
-    if (startCell.isVirtual) continue; // 仮想ノードは起点にしない
+    if (startCell.isVirtual) continue;
 
     const queue = [{ current: startCell, path: [startCell], lastLink: null }];
 
@@ -81,7 +75,6 @@ function searchWithVirtualNode(grid, n, pivot) {
       const { current, path, lastLink } = queue.shift();
 
       if (current.isVirtual) {
-        // 通過点専用: 強リンクのまま反対側へ素通り。弱リンクの分岐はしない。
         if (path.length >= 8) continue;
         const prev = path[path.length - 2];
         strongLinks
@@ -91,18 +84,20 @@ function searchWithVirtualNode(grid, n, pivot) {
       }
 
       if (path.length >= 4 && path.length % 2 === 0 && lastLink === "strong") {
-        const endCell = current;
-        const targetCells = grid.filter(c => {
-          if (c.status !== "candidate" || !c.val.includes(n)) return false;
-          if (c === startCell || c === endCell || path.includes(c)) return false;
-          const seesStart = (c.row === startCell.row || c.col === startCell.col || c.box === startCell.box);
-          const seesEnd   = (c.row === endCell.row || c.col === endCell.col || c.box === endCell.box);
-          return seesStart && seesEnd;
-        });
-
-        if (targetCells.length > 0) {
-          const routeStr = path.map(c => c.isVirtual ? `(仮想R${c.row+1}C${c.col+1})` : `R${c.row+1}C${c.col+1}`).join('-');
-          return { desc: `${routeStr} の連鎖により、${targetCells.map(c=>`R${c.row+1}C${c.col+1}`).join(', ')} の[${n}]を除外できます。` };
+        const hasVirtual = path.some(c => c.isVirtual);
+        if (hasVirtual) {
+          const endCell = current;
+          const targetCells = grid.filter(c => {
+            if (c.status !== "candidate" || !c.val.includes(n)) return false;
+            if (c === startCell || c === endCell || path.includes(c)) return false;
+            const seesStart = (c.row === startCell.row || c.col === startCell.col || c.box === startCell.box);
+            const seesEnd   = (c.row === endCell.row || c.col === endCell.col || c.box === endCell.box);
+            return seesStart && seesEnd;
+          });
+          if (targetCells.length > 0) {
+            const routeStr = path.map(c => c.isVirtual ? `(仮想R${c.row+1}C${c.col+1})` : `R${c.row+1}C${c.col+1}`).join('-');
+            return { desc: `${routeStr} の連鎖により、${targetCells.map(c=>`R${c.row+1}C${c.col+1}`).join(', ')} の[${n}]を除外できます。` };
+          }
         }
       }
 
@@ -115,8 +110,8 @@ function searchWithVirtualNode(grid, n, pivot) {
       }
 
       if (lastLink === "strong") {
-        candCells
-          .filter(c => c !== current && !c.isVirtual && !path.includes(c) &&
+        realCands
+          .filter(c => c !== current && !path.includes(c) &&
                        (c.row === current.row || c.col === current.col || c.box === current.box))
           .forEach(c => queue.push({ current: c, path: [...path, c], lastLink: "weak" }));
       }
