@@ -83,7 +83,7 @@ function searchWithVirtualNode(grid, n, pivot, armCells) {
         continue;
       }
 
-      if (realLen >= 4 && realLen % 2 === 0 && lastLink === "strong") {
+      if (realLen >= 2 && realLen % 2 === 0 && lastLink === "strong") {
         const hasVirtual = path.some(c => c.isVirtual);
         if (hasVirtual) {
           const endCell = current;
